@@ -19,15 +19,25 @@ jobs:
         with:
           python-version: '3.12'
       - name: Instalar dependências
-        run: python -m pip install cryptography pyinstaller "terraria-player @ git+https://github.com/royalrizen/Terraria-Plr-Editor.git@0c514f6e2225c961155b9350068c2b20ef8ac833"
+        run: python -m pip install cryptography pyinstaller pillow pystray==0.19.5 "terraria-player @ git+https://github.com/royalrizen/Terraria-Plr-Editor.git@0c514f6e2225c961155b9350068c2b20ef8ac833"
       - name: Verificar biblioteca de leitura 1.4.5
         run: python -c "from terraria_player import PlayerParser; print(PlayerParser.__name__)"
       - name: Testar leitura segura de pesquisas
         run: python -m unittest discover -s tests -v
-      - name: Gerar aplicativo exe
-        run: pyinstaller --noconfirm --clean --onefile --console --name JourneyArchiveSync --add-data "data/persistent-items.json;data" companion/sync.py
+      - name: Gerar sincronizador discreto (sem CMD)
+        run: pyinstaller --noconfirm --clean --onefile --windowed --name JourneyArchiveSync --paths . --collect-submodules pystray --add-data "data/persistent-items.json;data" companion/tray.py
+      - name: Testar executável sem console
+        run: |
+          $exe = Join-Path $PWD "dist/JourneyArchiveSync.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw "App sem console falhou: $($process.ExitCode)" }
+        shell: pwsh
+      - name: Gerar ferramenta de diagnóstico (opcional)
+        run: pyinstaller --noconfirm --clean --onefile --console --name JourneyArchiveSync-Diagnostico --paths . --add-data "data/persistent-items.json;data" companion/sync.py
       - uses: actions/upload-artifact@v4
         with:
           name: JourneyArchiveSync-Windows
-          path: dist/JourneyArchiveSync.exe
+          path: |
+            dist/JourneyArchiveSync.exe
+            dist/JourneyArchiveSync-Diagnostico.exe
           if-no-files-found: error
