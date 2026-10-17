@@ -16,7 +16,7 @@ const TEXT={
 };
 const CAT_KEYS=['all','weapons','tools','armor','accessories','blocks','potions','materials','furniture','other'];
 const COMMON_ES={1:'Pico de hierro',2:'Bloque de tierra',3:'Bloque de piedra',8:'Antorcha',9:'Madera',23:'Gel',29:'Cristal de vida',50:'Espejo mágico',54:'Botas de Hermes'};
-const S={language:'pt',items:[],byId:new Map(),byTitle:new Map(),catalogOK:false,manual:new Set(),sync:{countsById:{},unknownByKey:{}},unknownIndex:new Map(),connected:false,syncWaiting:false,syncPlayer:'',filter:'all',category:'all',query:'',shown:80,view:'list',currentItem:null,currentTitle:'',currentLocale:'en',scrollY:0,fetchController:null,articleCache:new Map(),articleURL:'',wikiLoaded:false,debounce:null};
+const S={language:'pt',articleLanguage:'pt',items:[],byId:new Map(),byTitle:new Map(),catalogOK:false,manual:new Set(),sync:{countsById:{},unknownByKey:{}},unknownIndex:new Map(),connected:false,syncWaiting:false,syncPlayer:'',filter:'all',category:'all',query:'',shown:80,view:'list',currentItem:null,currentTitle:'',currentLocale:'en',scrollY:0,fetchController:null,articleCache:new Map(),articleURL:'',wikiLoaded:false,debounce:null};
 
 const tr=k=>TEXT[S.language][k]||TEXT.pt[k]||k;
 const fmt=n=>safeNum(n).toLocaleString(LANGS[S.language]);
@@ -29,6 +29,14 @@ function loadSaved(){
  if(sync?.protocol===1&&sync.countsById&&typeof sync.countsById==='object')S.sync=sync;
  S.unknownIndex=new Map(Object.entries(S.sync.unknownByKey||{}).map(([k,v])=>[keyName(k.split(':').pop()),safeNum(v)]));
  try{const lng=localStorage.getItem('journey-archive-lang-v1');if(LANGS[lng])S.language=lng}catch(e){}
+ try{const lng=localStorage.getItem('journey-archive-article-lang-v1');if(LANGS[lng])S.articleLanguage=lng}catch(e){}
+}
+function setArticleLanguage(next){
+ if(!LANGS[next]||S.articleLanguage===next)return;
+ S.articleLanguage=next;
+ try{localStorage.setItem('journey-archive-article-lang-v1',next)}catch(e){}
+ S.articlePreferredLocale=next;
+ if(S.view==='article')loadArticle(S.currentItem,S.currentTitle);
 }
 function setLanguage(next){
  if(!LANGS[next])return;
@@ -234,14 +242,24 @@ function applyRoute(){
  }
 }
 function articleCandidates(item,title){
- const enTitle=String(item?.wikiTitle||item?.en||title||'').trim();
- const choices=[];
- if(!item&&enTitle&&S.articlePreferredLocale!=='en')choices.push({locale:LANGS[S.articlePreferredLocale]?S.articlePreferredLocale:S.language,title:enTitle});
- if(S.language==='pt'&&item?.pt)choices.push({locale:'pt',title:item.pt});
- if(S.language==='es'&&item?.es)choices.push({locale:'es',title:item.es});
- if(S.language==='es'&&!item?.es&&COMMON_ES[item?.id])choices.push({locale:'es',title:COMMON_ES[item.id]});
- if(enTitle)choices.push({locale:'en',title:enTitle});
- return choices.filter((x,i,a)=>a.findIndex(y=>y.locale===x.locale&&y.title===x.title)===i);
+ const english=String(item?.wikiTitle||item?.en||title||'').trim();
+ const requested=(!item&&LANGS[S.articlePreferredLocale])?S.articlePreferredLocale:S.articleLanguage;
+ const list=[];
+ if(requested==='pt'){
+  // Localized Terraria Wiki pages commonly have redirects from the English title.
+  // Even newly added items without a translated catalogue name can use them.
+  if(item?.pt)list.push({locale:'pt',title:item.pt});
+  if(english)list.push({locale:'pt',title:english});
+ }else if(requested==='es'){
+  if(item?.es)list.push({locale:'es',title:item.es});
+  if(item&&COMMON_ES[item.id])list.push({locale:'es',title:COMMON_ES[item.id]});
+  if(english)list.push({locale:'es',title:english});
+ }else if(english){
+  list.push({locale:'en',title:english});
+ }
+ // On a missing translation, show English clearly labeled as a fallback.
+ if(english)list.push({locale:'en',title:english});
+ return list.filter((candidate,i,all)=>all.findIndex(c=>c.locale===candidate.locale&&c.title===candidate.title)===i);
 }
 async function fetchArticle(candidate,signal){
  const code=candidate.locale,base='https://terraria.wiki.gg'+(code==='en'?'':'/'+code)+'/api.php';
@@ -350,8 +368,17 @@ async function loadArticle(item,title){
    const article=await fetchArticle(candidate,controller.signal);
    if(controller.signal.aborted)return;
    const container=$('#wikiContent');container.replaceChildren(wikiDocument(article.html,article.locale));
+   container.lang=article.locale==='pt'?'pt-BR':article.locale==='es'?'es':'en';
+   if(article.locale!==S.articleLanguage){
+     const note=document.createElement('p');note.className='wiki-translation-notice';
+     note.textContent=S.language==='pt'?'Este artigo ainda não está disponível em português nesta versão da wiki. Exibindo a versão em inglês.':S.language==='es'?'Esta traducción no está disponible. Se muestra el artículo en inglés.':'The selected translation is unavailable. Showing the English article.';
+     container.prepend(note);
+   }
    $('#articleLabel').textContent=tr('article');
-   $('#articleLang').textContent=article.locale==='pt'?tr('articlePt'):article.locale==='es'?tr('articleEs'):tr('articleEnglish');
+   const shown={pt:'🇧🇷 Português',en:'🇺🇸 English',es:'🇪🇸 Español'}[article.locale]||article.locale;
+   const selected={pt:'Português',en:'English',es:'Español'}[S.articleLanguage];
+   $('#articleLang').textContent=article.locale===S.articleLanguage?shown:('⚠ '+shown+' · '+(S.language==='pt'?'tradução não disponível em ':S.language==='es'?'traducción no disponible en ':'translation unavailable in ')+selected);
+   $('#articleLanguage').value=S.articleLanguage;
    sourceFooter(article);
    $('#articleLoader').hidden=true;$('#articleError').hidden=true;$('#articleFrame').hidden=false;
    S.currentLocale=article.locale;S.wikiLoaded=true;
@@ -371,6 +398,8 @@ function translateStatic(){
  for(let i=1;i<CAT_KEYS.length;i++)$('#category').options[i].text=tr('categories')[i];
  for(const b of $$('button[data-filter]')){b.textContent=tr(b.dataset.filter)}
  $('#articleLabel').textContent=tr('article');$('#loaderText').textContent=tr('articleLoading');
+ $('#articleLanguage').value=S.articleLanguage;
+ $('#articleLanguageLabel').textContent=S.language==='en'?'Article language':S.language==='es'?'Idioma del artículo':'Idioma do artigo';
  $('#retryArticle').textContent=tr('articleRetry');
  $('#footer').textContent=tr('footer');
  updateStatus();updateProgress();
@@ -460,6 +489,7 @@ async function importProgress(file){
 }
 function bootEvents(){
  $('#language').addEventListener('change',e=>setLanguage(e.target.value));
+ $('#articleLanguage').addEventListener('change',e=>setArticleLanguage(e.target.value));
  $('#search').addEventListener('input',e=>{S.query=e.target.value;S.shown=80;clearTimeout(S.debounce);S.debounce=setTimeout(renderList,100)});
  $('#category').addEventListener('change',e=>{S.category=e.target.value;S.shown=80;renderList()});
  for(const btn of $$('button[data-filter]'))btn.addEventListener('click',()=>{
