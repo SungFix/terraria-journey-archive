@@ -45,6 +45,13 @@ jobs:
               raise RuntimeError(f'No article {name} {lang}')
             (root/(name.replace(' ','_')+'_'+lang+'.html')).write_text(article,encoding='utf8')
             print('Fetched',name,lang,'HTML chars',len(article))
+            if name == 'Iron Pickaxe':
+              import re
+              for needle in ('Qualquer Madeira','Madeira','Barra de Ferro','20'):
+                indices=[m.start() for m in list(re.finditer(re.escape(needle),article,re.I))[:3]]
+                for i in indices:
+                  print('RECIPE_HTML',needle,repr(article[max(0,i-500):i+550]))
+
           PY
       - name: Testar legibilidade em computador e celular
         run: |
