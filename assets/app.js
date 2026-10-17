@@ -360,11 +360,22 @@ function wikiDocument(html,locale){
   const nameWrapper=[...itemLink.children].slice(1)
    .find(el=>el.tagName==='SPAN'&&el.textContent.trim());
   if(iconLink?.tagName!=='A'||!iconLink.querySelector('img')||!nameWrapper)continue;
-  const bullet=doc.createElement('span');
-  bullet.className='wiki-item-separator';
-  bullet.textContent='•';
-  bullet.setAttribute('aria-hidden','true');
-  iconLink.after(bullet);
+  itemLink.classList.add('journey-item-link');
+  if(!itemLink.querySelector(':scope > .wiki-item-separator')){
+   const bullet=doc.createElement('span');
+   bullet.className='wiki-item-separator';
+   bullet.textContent='•';
+   bullet.setAttribute('aria-hidden','true');
+   iconLink.after(bullet);
+  }
+  // Wiki recipes render an item followed by a bare amount, without spacing:
+  // <span class="i">icon + name</span><span class="am">20</span>
+  const amount=itemLink.nextElementSibling;
+  if(amount?.matches('span.am,span.amount,span.item-amount,span.stack-count')){
+   const raw=amount.textContent.trim();
+   amount.classList.add('journey-item-quantity');
+   if(/^\d[\d., ]*$/.test(raw))amount.textContent='× '+raw;
+  }
  }
  // The official wiki normally floats its infobox. We keep every section,
  // but place the infobox in an independent readable column instead of letting
