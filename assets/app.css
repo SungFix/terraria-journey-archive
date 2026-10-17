@@ -575,3 +575,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
  .wiki-language-label select{flex:1}
  .wiki-content .wiki-main{padding:11px}
 }
+
+/* Compact the brand on narrow mobile screens without removing controls */
+@media(max-width:420px){
+ .topbar{padding:0 9px;gap:5px}
+ .brand{gap:6px}
+ .brand-icon{width:27px;height:27px;font-size:15px}
+ .brand-lines strong{font-size:13px;letter-spacing:.025em;white-space:nowrap}
+ .brand-lines small{font-size:8px;letter-spacing:.02em;white-space:nowrap}
+ .top-actions{gap:5px}
+ .language{max-width:111px;font-size:11px}
+ .icon-button{width:33px;height:35px}
+}
