@@ -308,6 +308,69 @@ def parser_database(items: dict[str, tuple[int, int]]) -> Path:
     return target
 
 
+class PlayerReadTrace:
+    """Capture *numeric offsets*, never contents, while parsing v326.
+
+    The Terraria 1.4.5.6 library may fail after it has successfully decoded
+    the entire Journey research table. A local trace can distinguish that
+    from a corrupt or misaligned research list.
+    """
+    def __init__(self):
+        self.line = None
+        self.offset = None
+        self.string_error_offset = None
+        self.partial_research = None
+
+    def tracer(self, frame, event, arg):
+        module = frame.f_globals.get("__name__", "")
+        function = frame.f_code.co_name
+        if module == "terraria_player.parser.player" and function == "parse":
+            if event in ("line", "exception"):
+                self.line = frame.f_lineno
+                reader = frame.f_locals.get("reader")
+                if reader is not None:
+                    try:
+                        self.offset = reader.tell()
+                    except Exception:
+                        pass
+                if event == "exception":
+                    candidate = frame.f_locals.get("player")
+                    if isinstance(candidate, dict):
+                        research = candidate.get("researched_items")
+                        # This field is assigned only when all entries have
+                        # been read successfully by the external parser.
+                        if isinstance(research, dict) and research:
+                            self.partial_research = {
+                                "name": candidate.get("name"),
+                                "difficulty": candidate.get("difficulty"),
+                                "version": candidate.get("version"),
+                                "researched_items": dict(research),
+                            }
+        elif module == "terraria_player.binary.reader" and function == "read_7bit_int":
+            if event == "exception":
+                reader = frame.f_locals.get("self")
+                if reader is not None:
+                    try:
+                        self.string_error_offset = reader.tell()
+                    except Exception:
+                        pass
+        return self.tracer
+
+    def public_summary(self, data_size: int) -> str:
+        line = self.line if self.line is not None else "?"
+        position = self.offset if self.offset is not None else "?"
+        string_pos = (self.string_error_offset if self.string_error_offset is not None
+                      else "?")
+        if isinstance(position, int):
+            percent = round(position * 100 / max(1, data_size), 1)
+            pos_text = f"{position}/{data_size} ({percent}%)"
+        else:
+            pos_text = f"{position}/{data_size}"
+        status = "completa" if self.partial_research else "não alcançada"
+        return (f"parser_linha={line}, offset={pos_text}, "
+                f"string_offset={string_pos}, tabela_pesquisa={status}")
+
+
 def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict:
     """Read player data without altering any file.
 
@@ -331,19 +394,36 @@ def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict
 
     compatibility_probe = version >= 320
     supported_before = player_parser_impl.SUPPORTED_VERSIONS
+    previous_trace = sys.gettrace()
+    trace = PlayerReadTrace() if compatibility_probe else None
+    partial_tail_parse = False
     try:
         if compatibility_probe:
-            # Parser source has no fields annotated between 320-326.
-            # This only allows a guarded ATTEMPT; it is not proof of support.
+            # Attempt a read with the prior version's schema. This is only
+            # used for a guarded compatibility check, not proof of support.
             player_parser_impl.SUPPORTED_VERSIONS = range(0, 327)
+            sys.settrace(trace.tracer)
         parsed = PlayerParser(path, parser_database(items)).parse()
     except Exception as exc:
-        raise ValueError(
-            f"Leitura estrutural do save v{version} falhou: "
-            f"{type(exc).__name__} ({str(exc)[:140]}). "
-            "Nenhum item foi marcado."
-        ) from exc
+        # A future Terraria version may add fields AFTER the research table.
+        # In that one case, preserve *completed* table values from parser
+        # locals, never a partially parsed research dictionary.
+        if (trace is not None and trace.partial_research is not None
+                and isinstance(trace.offset, int)
+                and len(raw) // 3 < trace.offset <= len(raw)):
+            parsed = dict(trace.partial_research)
+            parsed["_parser_offset"] = trace.offset
+            parsed["_remaining_bytes"] = len(raw) - trace.offset
+            partial_tail_parse = True
+        else:
+            details = trace.public_summary(len(raw)) if trace else "leitor anterior"
+            raise ValueError(
+                f"Leitura estrutural do save v{version} falhou "
+                f"({type(exc).__name__}); {details}. "
+                "Nenhum item foi marcado."
+            ) from exc
     finally:
+        sys.settrace(previous_trace)
         player_parser_impl.SUPPORTED_VERSIONS = supported_before
 
     if parsed.get("name") != player or parsed.get("version") != version:
@@ -359,11 +439,15 @@ def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict
         raise ValueError("Leitor não informou os limites da leitura. Nada foi marcado.")
     if not (len(raw) // 3 < consumed <= len(raw)) or trailing != len(raw) - consumed:
         raise ValueError("Limites da estrutura incompatíveis com o save. Nada foi marcado.")
-    if compatibility_probe and trailing > max(4096, len(raw) // 10):
-        raise ValueError(
-            f"Save v{version}: {trailing} bytes finais desconhecidos; "
-            "leitura inconclusiva. Nada foi marcado."
-        )
+    # For partial-tail parsing the research table was fully assigned by the
+    # trusted versioned reader. Unknown post-research bytes are never read.
+    if compatibility_probe:
+        limit = max(16384, len(raw) // 2) if partial_tail_parse else max(4096, len(raw) // 10)
+        if trailing > limit:
+            raise ValueError(
+                f"Save v{version}: {trailing} bytes finais não interpretados; "
+                "leitura inconclusiva. Nada foi marcado."
+            )
 
     researched = parsed.get("researched_items")
     if not isinstance(researched, dict):
@@ -401,11 +485,16 @@ def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict
         "player": player, "version": version,
         "countsById": counts, "unknownByKey": unknown_keys,
         "unknownCount": len(unknown_keys),
-        "compatibility": "v326-experimental-validado-estruturalmente" if compatibility_probe else "conhecido",
+        "compatibility": ("v326-pesquisas-completas-salvas-antes-de-campo-novo" if partial_tail_parse
+                          else "v326-experimental-validado-estruturalmente" if compatibility_probe
+                          else "conhecido"),
         "diagnostic": {
             "version": version, "entries": len(researched),
             "recognized": recognized, "unrecognized": len(unknown_keys),
             "trailingBytes": trailing,
+            "partial": partial_tail_parse,
+            "parserLine": trace.line if trace else None,
+            "stringOffset": trace.string_error_offset if trace else None,
         }
     }
 
@@ -610,7 +699,10 @@ def main():
                   f"pesquisas={report.get('entries')}, "
                   f"identificadas={report.get('recognized')}, "
                   f"novas/desconhecidas={report.get('unrecognized')}, "
-                  f"bytes finais={report.get('trailingBytes')}")
+                  f"bytes finais={report.get('trailingBytes')}; "
+                  f"parcial={report.get('partial')}; "
+                  f"linha={report.get('parserLine')}; "
+                  f"stringOffset={report.get('stringOffset')}")
         except Exception as exc:
             print(f"Leitura indisponível: {exc}")
         return
