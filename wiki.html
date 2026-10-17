@@ -1,74 +1,20 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#453126">
-<meta name="description" content="Wiki integrada ao Journey Archive: pesquise itens, veja seus detalhes e acompanhe o Modo Jornada do Terraria no mesmo site.">
-<title>Wiki integrada | Terraria Journey Archive</title>
-<link rel="stylesheet" href="assets/wiki.css">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Journey Archive · Terraria</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="1;url=./">
 </head>
-<body>
-<a class="skip-link" href="#article">Ir para o artigo</a>
-<header class="masthead" aria-label="Terraria Journey Archive"><a href="./index.html" class="masthead-link" aria-label="Voltar ao catálogo Terraria">Terraria</a></header>
-<div class="shell">
-  <button class="menu-toggle" id="menuToggle" aria-controls="sidebar" aria-expanded="false">☰ Explorar a wiki</button>
-  <aside class="sidebar" id="sidebar" aria-label="Navegação da wiki">
-    <section class="sidebar-box"><h2>✦ Journey Wiki</h2>
-      <a class="side-link" data-view="home" href="wiki.html">⌂ Página inicial</a>
-      <a class="side-link" href="index.html#catalogo">▦ Catálogo de itens</a>
-      <a class="side-link" data-view="guide" data-guide="journey" href="wiki.html?guide=journey">◈ Modo Jornada</a>
-      <a class="side-link" data-view="guide" data-guide="crafting" href="wiki.html?guide=crafting">⚒ Fabricação</a>
-    </section>
-    <section class="sidebar-box"><h2>Guias do jogo</h2>
-      <a class="side-link" href="wiki.html?guide=progression">⚔ Progressão</a>
-      <a class="side-link" href="wiki.html?guide=bosses">☠ Chefes</a>
-      <a class="side-link" href="wiki.html?guide=npcs">♙ NPCs e casas</a>
-      <a class="side-link" href="wiki.html?guide=biomes">🌿 Biomas</a>
-      <a class="side-link" href="wiki.html?guide=potions">⚗ Poções</a>
-      <a class="side-link" href="wiki.html?guide=fishing">◉ Pesca</a>
-      <a class="side-link" href="wiki.html?guide=hardmode">✶ Modo Difícil</a>
-    </section>
-    <section class="sidebar-box"><h2>Itens por categoria</h2>
-      <a class="side-link" href="wiki.html?category=weapons">⚔ Armas</a>
-      <a class="side-link" href="wiki.html?category=equipment">✦ Equipamentos</a>
-      <a class="side-link" href="wiki.html?category=building">▤ Blocos e paredes</a>
-      <a class="side-link" href="wiki.html?category=consumables">⚗ Consumíveis</a>
-      <a class="side-link" href="wiki.html?category=materials">◆ Materiais</a>
-      <a class="side-link" href="wiki.html?category=furniture">▣ Móveis</a>
-    </section>
-    <section class="sidebar-box sidebar-progress">
-      <h2>Minha jornada</h2>
-      <div class="progress-copy"><strong id="sideProgress">0%</strong><span id="sideCount">Carregando...</span></div>
-      <div class="progress-track"><div id="sideBar" class="progress-fill"></div></div>
-      <a class="side-link" href="index.html#sincronizacao">↻ Sincronização automática</a>
-      <p>Acompanhe seu personagem sem enviar saves para a internet.</p>
-    </section>
-  </aside>
-  <div class="page">
-    <nav class="tabs" aria-label="Navegação superior">
-      <a href="index.html" class="tab">Catálogo</a>
-      <a href="wiki.html" class="tab active" aria-current="page">Wiki integrada</a>
-      <a href="wiki.html?guide=journey" class="tab">Modo Jornada</a>
-      <div class="tab-spacer"></div>
-      <label class="top-language"><span>Idioma</span><select id="language" aria-label="Idioma dos itens e artigos"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English</option><option value="es">🇪🇸 Español</option></select></label>
-    </nav>
-    <main class="content" id="article">
-      <div class="wiki-search-bar">
-        <div class="search-field"><span class="search-icon">⌕</span><input id="search" type="search" autocomplete="off" placeholder="Pesquisar itens e guias da Wiki..." aria-label="Pesquisar na wiki"></div>
-        <button id="searchGo" class="button gold" type="button">Pesquisar</button>
-      </div>
-      <div id="searchResults" class="search-results" hidden aria-live="polite"></div>
-      <div id="bread" class="breadcrumb" aria-label="Localização">Wiki integrada</div>
-      <div id="view" class="view" aria-live="polite"></div>
-    </main>
-    <footer class="footer">
-      <span>Journey Wiki — projeto independente para o Modo Jornada.</span>
-      <span>Conteúdo explicativo original e catálogo histórico. Imagens do Terraria © Re-Logic. Não afiliado à Re-Logic.</span>
-    </footer>
-  </div>
-</div>
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="assets/wiki-guides.js" defer></script>
-<script src="assets/wiki.js" defer></script>
+<body style="background:#342920;color:#f5eaca;font:16px system-ui;text-align:center;margin:12vh 20px">
+<p>A wiki agora faz parte da lista de itens do Journey Archive.</p>
+<p><a style="color:#a6eeb0" href="./">Abrir o Journey Archive</a></p>
+<script>
+(function(){
+const url=new URL('./',location.href);
+for(const key of ['item','article'])if(new URLSearchParams(location.search).has(key)){
+ url.searchParams.set(key,new URLSearchParams(location.search).get(key));break;
+}
+location.replace(url.toString());
+})();
+</script>
 </body></html>
