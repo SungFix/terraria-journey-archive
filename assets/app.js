@@ -126,7 +126,9 @@ function cardFor(item){
  const description=document.createElement('span');description.className='item-info';
  const name=document.createElement('strong');name.className='item-name';name.textContent=nameOf(item);
  const tiny=document.createElement('small');tiny.className='item-id';tiny.textContent='ID '+item.id;
- description.append(name,tiny);link.append(image,description);
+ const separator=document.createElement('span');separator.className='item-separator';
+ separator.textContent='•';separator.setAttribute('aria-hidden','true');
+ description.append(name,tiny);link.append(image,separator,description);
  const footer=document.createElement('div');footer.className='item-footer';
  const q=document.createElement('span');q.className='qty';q.innerHTML='<strong>'+fmt(item.qty)+'×</strong> '+escapeHtml(tr('need'));
  const mark=document.createElement('button');mark.className='mark';mark.type='button';mark.dataset.mark=String(item.id);
