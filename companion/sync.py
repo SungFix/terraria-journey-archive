@@ -545,7 +545,7 @@ def choose_player(force: bool = False) -> Path:
         print("  A. Escolher outra pasta/arquivo")
         if not files:
             print("Nenhum save local encontrado. Escolha o .plr manualmente.")
-        response = input("Número (ou A): ").strip().lower() if sys.stdin.isatty() else "a"
+        response = input("Número (ou A): ").strip().lower() if sys.stdin is not None and sys.stdin.isatty() else "a"
         if response.isdecimal() and 1 <= int(response) <= len(files):
             chosen = files[int(response)-1]
         else:
