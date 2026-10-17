@@ -53,7 +53,9 @@ Abra o Prompt de Comando na pasta do executável e rode:
 JourneyArchiveSync.exe --diagnose
 ```
 
-Esse comando mostra a versão do save, sua dimensão e, quando a leitura passa, um resumo da estrutura e das pesquisas, sem publicar o arquivo ou o nome do personagem. Para v326 ele faz uma tentativa de leitura conservadora; se houver qualquer inconsistência, não sincroniza nem marca itens. Envie apenas **as linhas do diagnóstico** se precisar de suporte; evite publicar arquivos `.plr` completos.
+Esse comando mostra a versão do save, sua dimensão e, quando a leitura passa, um resumo da estrutura e das pesquisas, sem publicar o arquivo ou o nome do personagem. Em saves v326, quando o leitor falha, ele informa a linha do leitor, **offset** (posição numérica do erro) e se a tabela de pesquisas já havia sido inteiramente lida. Nenhum byte bruto ou conteúdo do save é exibido.
+
+**V7:** Quando o leitor antigo completa a tabela de pesquisas antes de falhar em campos novos posteriores, a V7 pode sincronizar essa tabela com verificações adicionais de segurança. Se a falha ocorrer antes da tabela ser concluída, o sincronizador não altera as marcações e informa offsets para diagnóstico. A V7 ainda precisa ser validada em um save v326 real. Para v326 ele faz uma tentativa de leitura conservadora; se houver qualquer inconsistência, não sincroniza nem marca itens. Envie apenas **as linhas do diagnóstico** se precisar de suporte; evite publicar arquivos `.plr` completos.
 
 ### Rodar pelo código-fonte (alternativa)
 
