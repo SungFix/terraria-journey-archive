@@ -83,6 +83,11 @@ for (const [name,lang] of cases) {
         backgrounds:sample,
         overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
         renderedText:document.querySelector('#wikiContent')?.innerText?.length||0,
+        threeDSLogos:[...document.querySelectorAll('#wikiContent img')].filter(img=>{
+          const src=img.getAttribute('src')||'',alt=img.getAttribute('alt')||'';
+          return /(?:^|\/)(?:3ds|nintendo[_ -]?3ds)(?:[_ -]?(?:logo|icon))?\.(?:svg|png|webp|gif)(?:[?#/]|$)/i.test(src)
+            || /^(?:vers[aã]o para )?(?:nintendo\s+)?3ds$/i.test(alt);
+        }).map(img=>({src:img.src,alt:img.alt})),
         treeChain:(()=>{
           const t=document.querySelector('.crafting-tree table.diagram');
           const out=[];let el=t;
@@ -112,9 +117,9 @@ for (const [name,lang] of cases) {
       if(['rgb(248, 243, 232)','rgb(244, 238, 226)','rgb(250, 245, 235)'].includes(background))
         low.push({text:cell.text,problem:'light background returned'});
     }
-    const pass = !errors.length && !low.length && audit.overflow<=6 && audit.renderedText>150;
+    const pass = !errors.length && !low.length && !audit.threeDSLogos.length && audit.overflow<=6 && audit.renderedText>150;
     results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),
-      overflow:audit.overflow,treeChain:audit.overflow>6?audit.treeChain:[],offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
+      overflow:audit.overflow,threeDSLogos:audit.threeDSLogos,treeChain:audit.overflow>6?audit.treeChain:[],offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
     if(!pass)failures.push(name+' ('+width+'px): '+JSON.stringify(results.at(-1)));
     if(name==='Iron Pickaxe'||name==='Zenith'){
       await page.screenshot({path:'/tmp/terraria-contrast-qa/'+name.replaceAll(' ','-')+'-'+width+'.png'});
