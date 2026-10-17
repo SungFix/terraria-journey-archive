@@ -746,3 +746,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   contain:inline-size;
   overflow-x:auto!important;
 }
+
+
+/* Clip intrinsic crafting-diagram overflow at the page frame boundary.
+   Individual recipe trees keep their own horizontal scroll bar. */
+.frame{
+  overflow-x:clip;
+}
