@@ -1,3 +1,7 @@
 cryptography>=42,<47
 pycryptodome>=3.21,<4
 terraria-player @ git+https://github.com/royalrizen/Terraria-Plr-Editor.git@0c514f6e2225c961155b9350068c2b20ef8ac833
+
+# Tray application (Windows)
+pystray==0.19.5
+Pillow>=10,<13
