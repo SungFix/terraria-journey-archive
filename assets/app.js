@@ -203,11 +203,11 @@ function goToItem(id,replace=false){
  if(replace)history.replaceState({item:id},'',path);else history.pushState({item:id},'',path);
  applyRoute();window.scrollTo(0,0);
 }
-function goToTitle(title){
+function goToTitle(title,locale=S.currentLocale||S.language){
  const matched=S.byTitle.get(keyName(title));
  if(matched)return goToItem(matched.id);
  if(S.view==='list')S.scrollY=window.scrollY;
- history.pushState({article:title},'',makeURL({article:title}));
+ history.pushState({article:title},'',makeURL({article:title,lang:LANGS[locale]?locale:'en'}));
  applyRoute();window.scrollTo(0,0);
 }
 function goBack(){
@@ -223,6 +223,7 @@ function applyRoute(){
   loadArticle(S.currentItem,S.currentTitle);
  }else if(title&&title.length<=220){
   S.view='article';S.currentItem=null;S.currentTitle=title;
+  S.articlePreferredLocale=LANGS[p.get('lang')]?p.get('lang'):S.language;
   $('#listView').hidden=true;$('#detailView').hidden=false;renderGenericHeader(title);
   loadArticle(null,title);
  }else{
@@ -235,6 +236,7 @@ function applyRoute(){
 function articleCandidates(item,title){
  const enTitle=String(item?.wikiTitle||item?.en||title||'').trim();
  const choices=[];
+ if(!item&&enTitle&&S.articlePreferredLocale!=='en')choices.push({locale:LANGS[S.articlePreferredLocale]?S.articlePreferredLocale:S.language,title:enTitle});
  if(S.language==='pt'&&item?.pt)choices.push({locale:'pt',title:item.pt});
  if(S.language==='es'&&item?.es)choices.push({locale:'es',title:item.es});
  if(S.language==='es'&&!item?.es&&COMMON_ES[item?.id])choices.push({locale:'es',title:COMMON_ES[item.id]});
@@ -308,7 +310,7 @@ function wikiDocument(html,locale){
     try{title=decodeURIComponent(title)}catch(e){}
     if(title.length<=220){
      const match=S.byTitle.get(keyName(title));
-     el.href=match?'?item='+match.id:'?article='+encodeURIComponent(title);
+     el.href=match?'?item='+match.id:'?article='+encodeURIComponent(title)+'&lang='+encodeURIComponent(locale);
      el.dataset.localLink='1';continue;
     }
    }
@@ -484,7 +486,7 @@ function bootEvents(){
   if(a.dataset.localLink==='1'){
    if(e.metaKey||e.ctrlKey||e.shiftKey)return;
    e.preventDefault();const href=a.getAttribute('href')||'',p=new URLSearchParams(href.startsWith('?')?href.slice(1):href.split('?')[1]||'');
-   if(p.has('item'))goToItem(+p.get('item'));else if(p.has('article'))goToTitle(p.get('article'));
+   if(p.has('item'))goToItem(+p.get('item'));else if(p.has('article'))goToTitle(p.get('article'),p.get('lang')||S.currentLocale);
   }
  });
  window.addEventListener('popstate',()=>{applyRoute();window.scrollTo(0,S.view==='list'?S.scrollY:0)});
