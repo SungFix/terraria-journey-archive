@@ -414,6 +414,19 @@ function wikiDocument(html,locale,item=null){
    }
  }
  if(infobox)infobox.remove();
+ if(infobox?.classList.contains('journey-exact-armor-piece')){
+   // All set components are still available, but keep unrelated item
+   // statistics tucked away so they don't overshadow the selected piece.
+   for(const wrapper of root.querySelectorAll(':scope > .infobox-wrapper')){
+     if(!wrapper.querySelector('.infobox.item')){wrapper.remove();continue}
+     const group=doc.createElement('details');
+     group.className='journey-other-armor-pieces';
+     const heading=doc.createElement('summary');
+     heading.textContent=locale==='pt'?'Outras peças deste conjunto':locale==='es'?'Otras piezas del conjunto':'Other pieces of this armor set';
+     wrapper.replaceWith(group);
+     group.append(heading,wrapper);
+   }
+ }
 
  // Keep the original index while making it collapsible rather than filling
  // the top of the article with a very tall contents box.
