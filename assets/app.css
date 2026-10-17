@@ -629,3 +629,62 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 #wikiContent .wiki-aside .infobox table td a{
   color:#b5eee2 !important;
 }
+
+
+/* Consistent dark wiki statistics for ALL items and article types.
+   Wiki markup differs across tools, weapons, armor, potions, furniture,
+   blocks and accessories; never rely on a particular infobox subtype. */
+#wikiContent .wiki-article-layout :is(.wikitable, .terraria, .statistics, .infobox table, .recipe, .recipes table),
+#wikiContent .wiki-main table{
+  background-color:#283b30 !important;
+  color:#f6eee0 !important;
+  border-color:#60775c !important;
+}
+#wikiContent .wiki-article-layout :is(table, .wikitable, .terraria) :is(thead,tbody,tfoot){
+  background-color:transparent !important;
+  color:inherit !important;
+}
+#wikiContent .wiki-article-layout table tr{
+  background-color:#293b2f !important;
+  color:#f4edda !important;
+}
+#wikiContent .wiki-article-layout table tr:nth-child(even){
+  background-color:#354b3a !important;
+}
+#wikiContent .wiki-article-layout table :is(td,th){
+  background-color:transparent !important;
+  color:#f4edda !important;
+  border-color:#526b51 !important;
+}
+#wikiContent .wiki-article-layout table tr:nth-child(even) > :is(td,th){
+  background-color:#354b3a !important;
+}
+#wikiContent .wiki-article-layout table tr:nth-child(odd) > :is(td,th){
+  background-color:#293b2f !important;
+}
+#wikiContent .wiki-article-layout table th{
+  color:#dfebc7 !important;
+  font-weight:700;
+}
+#wikiContent .wiki-article-layout table :is(span,small,font,strong,b,i,em){
+  color:inherit;
+}
+#wikiContent .wiki-article-layout table a{
+  color:#b3efdf !important;
+}
+#wikiContent .wiki-article-layout table a:hover{
+  color:#f4ffe2 !important;
+}
+#wikiContent .wiki-article-layout .wiki-aside :is(.infobox,.statistics,.section){
+  background-color:#293b2f !important;
+  color:#f2ebdc !important;
+}
+#wikiContent .wiki-article-layout .wiki-aside :is(.section.statistics,.section.stats,.stat,.stats,.attribute,.property) :is(span,font,small){
+  color:inherit !important;
+}
+#wikiContent .wiki-article-layout .wiki-main :is(.terraria,.recipes,.crafting,.drops) :is(td,th,li){
+  color:#f4edda !important;
+}
+#wikiContent .wiki-article-layout .wiki-main :is(.recipe,.crafting,.recipes) a{
+  color:#b3efdf !important;
+}
