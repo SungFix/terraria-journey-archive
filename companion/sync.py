@@ -403,7 +403,12 @@ def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict
             # used for a guarded compatibility check, not proof of support.
             player_parser_impl.SUPPORTED_VERSIONS = range(0, 327)
             sys.settrace(trace.tracer)
-        parsed = PlayerParser(path, parser_database(items)).parse()
+        if compatibility_probe:
+            from v326_reader import Terraria326Parser
+            parser_cls = Terraria326Parser
+        else:
+            parser_cls = PlayerParser
+        parsed = parser_cls(path, parser_database(items)).parse()
     except Exception as exc:
         # A future Terraria version may add fields AFTER the research table.
         # In that one case, preserve *completed* table values from parser
