@@ -381,14 +381,25 @@ function wikiDocument(html,locale,item=null){
   }
   /* Wikitext tables can have incidental inline widths; CSS scrolls them. */
  }
- // Terraria Wiki item links use <span class="i"><a><img></a><span>Item name</span></span>.
- // Add one accessible visual separator only when there is a real item name
- // following an icon; this covers crafting ingredients, drops and stations.
+ // Normalize item representations from MediaWiki. Some templates place the
+ // amount inside the icon wrapper while others use a sibling or text node.
+ // Preserve all original links and article data: add only visual separators.
+ const amountSelector='span.am,span.amount,span.item-amount,span.stack-count,small.am,small.amount';
+ function decorateQuantity(amount){
+  if(!amount||amount.dataset.journeyQuantity==='1')return;
+  const raw=(amount.textContent||'').trim();
+  if(!/^\\d[\\d., ]*$/.test(raw))return;
+  amount.classList.add('journey-item-quantity');
+  amount.dataset.journeyQuantity='1';
+  amount.textContent='• '+raw;
+ }
  for(const itemLink of root.querySelectorAll('span.i')){
-  const iconLink=itemLink.firstElementChild;
-  const nameWrapper=[...itemLink.children].slice(1)
-   .find(el=>el.tagName==='SPAN'&&el.textContent.trim());
-  if(iconLink?.tagName!=='A'||!iconLink.querySelector('img')||!nameWrapper)continue;
+  const iconLink=[...itemLink.children].find(el=>el.querySelector('img')||el.tagName==='IMG');
+  if(!iconLink)continue;
+  const nameWrapper=[...itemLink.children].find(el=>el!==iconLink&&
+   !el.matches(amountSelector)&&el.textContent.trim());
+  const directText=[...itemLink.childNodes].find(node=>node.nodeType===3&&node.textContent.trim());
+  if(!nameWrapper&&!directText)continue;
   itemLink.classList.add('journey-item-link');
   if(!itemLink.querySelector(':scope > .wiki-item-separator')){
    const bullet=doc.createElement('span');
@@ -397,14 +408,17 @@ function wikiDocument(html,locale,item=null){
    bullet.setAttribute('aria-hidden','true');
    iconLink.after(bullet);
   }
-  // Wiki recipes render an item followed by a bare amount, without spacing:
-  // <span class="i">icon + name</span><span class="am">20</span>
-  const amount=itemLink.nextElementSibling;
-  if(amount?.matches('span.am,span.amount,span.item-amount,span.stack-count')){
-   const raw=amount.textContent.trim();
-   amount.classList.add('journey-item-quantity');
-   if(/^\d[\d., ]*$/.test(raw))amount.textContent='× '+raw;
-  }
+  let amount=itemLink.nextElementSibling;
+  if(amount?.matches(amountSelector))decorateQuantity(amount);
+  for(const nested of itemLink.querySelectorAll(amountSelector))decorateQuantity(nested);
+ }
+ // Amounts in recipe cells can be separated by incidental whitespace nodes.
+ // Find the previous item in that same cell, never cross to another recipe row.
+ for(const amount of root.querySelectorAll(amountSelector)){
+  if(amount.dataset.journeyQuantity==='1')continue;
+  let prev=amount.previousSibling;
+  while(prev&&prev.nodeType===3&&!prev.textContent.trim())prev=prev.previousSibling;
+  if(prev?.nodeType===1&&prev.matches('span.i.journey-item-link'))decorateQuantity(amount);
  }
  // Armor-piece links redirect to the *entire set's* Wiki page.
  // Identify the exact requested equipment piece by its INTERNAL ITEM ID,
