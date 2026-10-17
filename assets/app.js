@@ -352,6 +352,20 @@ function wikiDocument(html,locale){
   }
   /* Wikitext tables can have incidental inline widths; CSS scrolls them. */
  }
+ // Terraria Wiki item links use <span class="i"><a><img></a><span>Item name</span></span>.
+ // Add one accessible visual separator only when there is a real item name
+ // following an icon; this covers crafting ingredients, drops and stations.
+ for(const itemLink of root.querySelectorAll('span.i')){
+  const iconLink=itemLink.firstElementChild;
+  const nameWrapper=iconLink?.nextElementSibling;
+  if(iconLink?.tagName!=='A'||!iconLink.querySelector('img')||
+     nameWrapper?.tagName!=='SPAN'||!nameWrapper.textContent.trim())continue;
+  const bullet=doc.createElement('span');
+  bullet.className='wiki-item-separator';
+  bullet.textContent='•';
+  bullet.setAttribute('aria-hidden','true');
+  iconLink.after(bullet);
+ }
  // The official wiki normally floats its infobox. We keep every section,
  // but place the infobox in an independent readable column instead of letting
  // the wiki's wide tables and floats overlap the text.
