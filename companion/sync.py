@@ -404,7 +404,10 @@ def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict
             player_parser_impl.SUPPORTED_VERSIONS = range(0, 327)
             sys.settrace(trace.tracer)
         if compatibility_probe:
-            from v326_reader import Terraria326Parser
+            try:
+                from companion.v326_reader import Terraria326Parser
+            except ImportError:
+                from v326_reader import Terraria326Parser
             parser_cls = Terraria326Parser
         else:
             parser_cls = PlayerParser
