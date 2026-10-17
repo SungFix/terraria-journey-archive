@@ -70,3 +70,15 @@ for title in ["File:Molten Helmet.png", "File:Molten armor.png",
               "INFO", page.get("imageinfo", [{}])[0].get("url", "N/A"))
     except Exception as e:
         print("IMAGEFAIL", title, type(e).__name__, str(e)[:120])
+
+print("\nVERIFICATION: actual Wiki language links for redirecting armor pieces")
+for name in ["Molten Helmet", "Copper Helmet", "Hallowed Helmet"]:
+    try:
+        raw=fetch("/api.php", {"action":"query","prop":"langlinks",
+                                "titles":name,"redirects":1,
+                                "lllang":"pt","format":"json"})
+        pages=list(raw.get("query",{}).get("pages",{}).values())
+        names=[l.get("*") for page in pages for l in page.get("langlinks",[]) if l.get("lang")=="pt"]
+        print("LANG-LINK",name,"PT",names)
+    except Exception as e:
+        print("LANG-LINK ERROR",name,type(e).__name__,str(e)[:120])
