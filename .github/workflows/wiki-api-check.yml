@@ -48,6 +48,28 @@ jobs:
             with open('research_list.html','w',encoding='utf-8') as o:o.write(body)
           except Exception as e: print('RESEARCH_LIST_ERROR',type(e).__name__,str(e)[:180])
           PY
+      - name: Capture real article rendering fixture
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request,urllib.parse
+          for lng,title in [('pt','Picareta de Ferro'),('en','Zenith')]:
+            prefix='' if lng=='en' else '/'+lng
+            url='https://terraria.wiki.gg'+prefix+'/api.php?'+urllib.parse.urlencode({'action':'parse','page':title,'prop':'text|displaytitle','format':'json','origin':'*'})
+            with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'JourneyArchiveQA/1.0'}),timeout=35) as resp:
+              data=json.load(resp)
+            content=data.get('parse',{}).get('text',{}).get('*','')
+            print(lng,'article length',len(content))
+            assert len(content)>5000
+            with open('article-'+lng+'.html','w',encoding='utf8') as out:out.write(content)
+          PY
+      - name: Save real articles
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraria-wiki-article-fixtures
+          path: |
+            article-pt.html
+            article-en.html
+          if-no-files-found: error
       - name: Save research-list diagnostics
         uses: actions/upload-artifact@v4
         if: always()
