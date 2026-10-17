@@ -267,7 +267,7 @@ function wikiDocument(html,locale){
     Script, event attributes, HTML forms and unsafe URL schemes are removed. */
  const doc=new DOMParser().parseFromString(html,'text/html');
  const root=doc.querySelector('.mw-parser-output')||doc.body;
- for(const bad of root.querySelectorAll('script,style,link,meta,iframe,object,embed,form,button,input,textarea,select,svg,math,canvas,video,audio,source,noscript'))bad.remove();
+ for(const bad of root.querySelectorAll('script,style,link,meta,iframe,object,embed,form,button,input,textarea,select,svg,math,canvas,video,noscript'))bad.remove();
  for(const bad of root.querySelectorAll('.mw-editsection,.mw-redirectedfrom,.noprint,.mw-jump-link,.printfooter'))bad.remove();
  const base='https://terraria.wiki.gg'+(locale==='en'?'':'/'+locale)+'/wiki/';
  for(const el of [...root.querySelectorAll('*')]){
@@ -286,7 +286,16 @@ function wikiDocument(html,locale){
    else{el.remove();continue}
    el.loading='lazy';el.decoding='async';el.removeAttribute('width');el.removeAttribute('height');
   }
+  if(el.tagName==='AUDIO'){
+   el.controls=true;el.preload='none';el.removeAttribute('autoplay');el.removeAttribute('loop');
+  }
+  if(el.tagName==='SOURCE'){
+   const src=allowedURL(el.getAttribute('src')||'',base);
+   if(src&&(src.hostname==='terraria.wiki.gg'||src.hostname.endsWith('.wiki.gg')))el.src=src.href;
+   else{el.remove();continue}
+  }
   if(el.tagName==='A'){
+   if(el.classList.contains('new')){el.removeAttribute('href');continue}
    const href=el.getAttribute('href')||'';
    if(href.startsWith('#')){
     el.setAttribute('href','#article-'+href.slice(1));el.dataset.articleAnchor='1';
