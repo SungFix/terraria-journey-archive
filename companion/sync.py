@@ -290,6 +290,76 @@ def decode_save(blob: bytes, items: dict[str, tuple[int, int]]) -> dict:
             "unknownByKey": unknown_keys, "unknownCount": len(unknown_keys)}
 
 
+
+def parser_database(items: dict[str, tuple[int, int]]) -> Path:
+    """Write a local item-name lookup, never any character/save contents."""
+    target = config_path().parent / "parser-items.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Public IDs from our catalog are enough for the independent player parser.
+    records = {
+        str(item_id): {"name": key, "internalName": key}
+        for key, (item_id, _needed) in items.items() if item_id > 0
+    }
+    if len(records) < 1000:
+        raise ValueError("Catálogo de IDs insuficiente para leitura segura")
+    # Avoid write churn; this file has only public item mappings.
+    if not target.exists():
+        target.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+    return target
+
+
+def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict:
+    """Read complete Terraria save format with version-aware field offsets.
+
+    Heuristic byte scanning is no longer used for auto-sync. The upstream
+    player parser explicitly supports Terraria 1.4.5.6; fail closed for later
+    unknown formats instead of fabricating a research table.
+    """
+    raw = decrypt_player(path.read_bytes())
+    version, player, _ = header(raw)
+    if version >= 320:
+        raise ValueError(
+            f"Save versão {version}: leitor compatível até a versão 319. "
+            "Precisamos atualizar o formato antes de sincronizar."
+        )
+    try:
+        from terraria_player import PlayerParser
+    except ImportError as exc:
+        raise RuntimeError("Biblioteca de leitura 1.4.5 ausente no executável") from exc
+    try:
+        parsed = PlayerParser(path, parser_database(items)).parse()
+    except Exception as exc:
+        # Do not include raw content, full user path or character details.
+        raise ValueError(
+            f"Não foi possível ler a estrutura do save v{version}: "
+            f"{type(exc).__name__} ({str(exc)[:180]})"
+        ) from exc
+    if parsed.get("name") != player:
+        raise ValueError("Nome inconsistente após leitura do save; nada foi marcado")
+    researched = parsed.get("researched_items")
+    if not isinstance(researched, dict):
+        raise ValueError("Leitor não encontrou tabela de pesquisas; nada foi marcado")
+    counts: dict[str, int] = {}
+    unknown_keys: dict[str, int] = {}
+    for code_name, quantity in researched.items():
+        if not isinstance(code_name, str) or not isinstance(quantity, int):
+            raise ValueError("Dados de pesquisa inválidos; nada foi marcado")
+        if quantity < 0 or quantity > 1000000:
+            raise ValueError("Quantidade de pesquisa inválida; nada foi marcado")
+        # Terraria persistent keys may be prefixed as Terraria:<item-name>.
+        key = code_name.split(":", 1)[-1]
+        match = items.get(key)
+        if match:
+            item_id, _ = match
+            counts[str(item_id)] = max(counts.get(str(item_id), 0), quantity)
+        else:
+            unknown_keys[code_name] = quantity
+    return {
+        "player": player, "version": version,
+        "countsById": counts, "unknownByKey": unknown_keys,
+        "unknownCount": len(unknown_keys),
+    }
+
 def candidate_paths() -> list[Path]:
     homes = [Path.home() / "Documents" / "My Games" / "Terraria" / "Players",
              Path.home() / "OneDrive" / "Documents" / "My Games" / "Terraria" / "Players"]
@@ -366,7 +436,7 @@ class SyncService:
             if signature == self.signature:
                 return
             # Windows/game can briefly hold this file open; retry next poll.
-            result = decode_save(self.player.read_bytes(), self.items)
+            result = decode_character_file(self.player, self.items)
             result.update({"app": "journey-archive-companion", "protocol": 1,
                            "ok": True, "message": "Save sincronizado",
                            "updatedAt": datetime.now(timezone.utc).isoformat()})
@@ -468,6 +538,7 @@ def main():
     parser.add_argument("--install-startup", action="store_true", help="Iniciar com Windows")
     parser.add_argument("--remove-startup", action="store_true", help="Remover início com Windows")
     parser.add_argument("--start", action="store_true", help="Iniciar usando seleção anterior")
+    parser.add_argument("--diagnose", action="store_true", help="Conferir localmente formato e leitura do save sem alterar nada")
     args = parser.parse_args()
     if args.install_startup or args.remove_startup:
         startup(args.install_startup, Path(sys.executable).resolve())
@@ -477,6 +548,18 @@ def main():
     player = Path(args.player).resolve() if args.player else choose_player(force=args.select)
     if not player.is_file():
         raise RuntimeError("Arquivo .plr inexistente")
+    if args.diagnose:
+        encrypted = player.read_bytes()
+        raw = decrypt_player(encrypted)
+        version, _player_name, _ = header(raw)
+        print(f"Diagnóstico: v{version}; tamanho={len(encrypted)} bytes; modo=Jornada")
+        try:
+            results = decode_character_file(player, items)
+            print(f"Leitura OK: identificados={len(results['countsById'])}, "
+                  f"novos/desconhecidos={results['unknownCount']}")
+        except Exception as exc:
+            print(f"Leitura indisponível: {exc}")
+        return
     service = SyncService(player, items)
     service.refresh()
     stop = threading.Event()
