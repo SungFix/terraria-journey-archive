@@ -110,16 +110,16 @@ def header(data: bytes) -> tuple[int, str, int]:
     return version, player, mode
 
 
-_RE_PERSISTENT = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,90}$")
+_RE_PERSISTENT = re.compile(r"^[A-Za-z][A-Za-z0-9_:]{0,90}$")
 
 
 def research_at(data: bytes, offset: int, items: dict[str, tuple[int, int]]) -> Optional[tuple[dict, int, int]]:
-    """Validate a complete count-prefixed list followed by 4 saved slot flags.
+    """Validate a count-prefixed research list and the following slot-flags byte.
 
     Never silently interpret arbitrary binary matches as researched items.
     """
     n = struct.unpack_from("<i", data, offset)[0]
-    if n < 1 or n > 9000 or offset + 4 + 6 * n + 4 > len(data):
+    if n < 1 or n > 9000 or offset + 4 + 6 * n + 1 > len(data):
         return None
     pos = offset + 4
     counts: dict[int, int] = {}
@@ -138,21 +138,24 @@ def research_at(data: bytes, offset: int, items: dict[str, tuple[int, int]]) -> 
         pos += 4
         if not 0 <= quantity <= 100000:
             return None
-        if name in items:
+        item_key = name.split(":", 1)[-1]
+        if item_key in items:
             if i == 0:
                 first_known = True
-            item_id, _ = items[name]
+            item_id, _ = items[item_key]
             counts[item_id] = quantity
             known += 1
         else:
             unknown += 1
             unknown_keys[name] = quantity
-        if unknown > max(3, (n // 2)):
+        if unknown > max(3, (n * 95) // 100):
             return None
-    # The Terraria 1.4 research list is followed by 4 flags for temporary items.
-    if pos + 4 > len(data) or any(b not in (0, 1) for b in data[pos:pos+4]):
+    # Terraria saves four optional temporary slots using FOUR BITS of ONE BYTE.
+    # The previous implementation incorrectly required four literal 0/1 bytes,
+    # which rejects normal modern (1.4.5) character files.
+    if pos >= len(data) or data[pos] & 0xF0:
         return None
-    if known < 1 or (known / n) < 0.50:
+    if known < 1:
         return None
     if n == 1 and not first_known:
         return None
@@ -166,7 +169,7 @@ def extract_research(data: bytes, items: dict[str, tuple[int, int]]) -> tuple[di
     winners = []
     for pos in range(minimum, len(data) - 12):
         n = struct.unpack_from("<i", data, pos)[0]
-        if not 1 <= n <= 9000 or pos + 4 + n * 6 + 4 > len(data):
+        if not 1 <= n <= 9000 or pos + 4 + n * 6 + 1 > len(data):
             continue
         first_length = data[pos + 4]
         if first_length < 2 or first_length > 91 or pos + 5 + first_length > len(data):
@@ -176,7 +179,7 @@ def extract_research(data: bytes, items: dict[str, tuple[int, int]]) -> tuple[di
             name = data[pos+5:pos+5+first_length].decode("ascii")
         except UnicodeDecodeError:
             continue
-        if name not in items and n <= 2:
+        if name.split(":", 1)[-1] not in items and n <= 2:
             continue
         result = research_at(data, pos, items)
         if result is not None:
