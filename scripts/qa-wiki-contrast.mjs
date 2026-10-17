@@ -83,6 +83,18 @@ for (const [name,lang] of cases) {
         backgrounds:sample,
         overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
         renderedText:document.querySelector('#wikiContent')?.innerText?.length||0,
+        treeChain:(()=>{
+          const t=document.querySelector('.crafting-tree table.diagram');
+          const out=[];let el=t;
+          while(el&&out.length<14){
+            const r=el.getBoundingClientRect(),c=getComputedStyle(el);
+            out.push({tag:el.tagName,cls:String(el.className).slice(0,55),width:Math.round(r.width),
+              clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,overflow:c.overflowX,
+              contain:c.contain,display:c.display});
+            el=el.parentElement;
+          }
+          return out;
+        })(),
         offenders:[...document.querySelectorAll('body *')].filter(el=>{
           const c=getComputedStyle(el),r=el.getBoundingClientRect();
           return c.display!=='none'&&c.visibility!=='hidden'&&r.right>innerWidth+15&&r.width>20;
@@ -102,7 +114,7 @@ for (const [name,lang] of cases) {
     }
     const pass = !errors.length && !low.length && audit.overflow<=6 && audit.renderedText>150;
     results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),
-      overflow:audit.overflow,offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
+      overflow:audit.overflow,treeChain:audit.overflow>6?audit.treeChain:[],offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
     if(!pass)failures.push(name+' ('+width+'px): '+JSON.stringify(results.at(-1)));
     if(name==='Iron Pickaxe'||name==='Zenith'){
       await page.screenshot({path:'/tmp/terraria-contrast-qa/'+name.replaceAll(' ','-')+'-'+width+'.png'});
