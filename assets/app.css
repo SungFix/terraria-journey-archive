@@ -731,3 +731,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   min-width:0;
   max-width:100%;
 }
+
+
+/* Isolate huge wiki crafting diagrams from the document's intrinsic width.
+   The diagram itself stays scrollable within .crafting-tree. */
+#wikiContent .wiki-article-layout .wiki-main{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow-x:clip!important;
+}
+#wikiContent .wiki-article-layout .wiki-main .crafting-tree{
+  max-width:100%!important;
+  width:100%!important;
+  contain:inline-size;
+  overflow-x:auto!important;
+}
