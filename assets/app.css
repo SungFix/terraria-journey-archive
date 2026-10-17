@@ -688,3 +688,46 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 #wikiContent .wiki-article-layout .wiki-main :is(.recipe,.crafting,.recipes) a{
   color:#b3efdf !important;
 }
+
+
+/* Wide crafting trees (e.g. Zenith / Terra Blade) scroll INSIDE their panel.
+   Do not let diagram columns force the whole article or mobile page to expand. */
+#wikiContent .wiki-main .crafting-tree{
+  display:block!important;
+  inline-size:100%;
+  max-inline-size:100%;
+  min-inline-size:0;
+  overflow-x:auto!important;
+  overflow-y:hidden;
+  border:1px solid #577258;
+  border-radius:6px;
+  background:#24352b!important;
+  padding:10px;
+  margin:12px 0 18px;
+  overscroll-behavior-inline:contain;
+  scrollbar-color:#779e71 #263b2d;
+}
+#wikiContent .wiki-main .crafting-tree table.diagram{
+  display:table!important;
+  width:max-content!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  border-spacing:0;
+  overflow:visible!important;
+}
+#wikiContent .wiki-main .crafting-tree table.diagram :is(th,td){
+  min-width:0!important;
+  padding:2px 3px!important;
+  white-space:nowrap;
+}
+#wikiContent .wiki-main .crafting-tree table.diagram td.l{
+  min-width:8px!important;
+  padding:0 2px!important;
+}
+/* Other intrinsically wide data tables remain horizontally scrollable. */
+#wikiContent .wiki-main .tabber-content,
+#wikiContent .wiki-main .mw-parser-output{
+  min-width:0;
+  max-width:100%;
+}
