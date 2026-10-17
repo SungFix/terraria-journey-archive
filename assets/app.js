@@ -272,6 +272,26 @@ function articleCandidates(item,title){
  if(english)list.push({locale:'en',title:english});
  return list.filter((candidate,i,all)=>all.findIndex(c=>c.locale===candidate.locale&&c.title===candidate.title)===i);
 }
+const localizedArticleTitles=new Map();
+async function findLocalizedArticleTitle(englishTitle,locale,signal){
+ if(!englishTitle||!['pt','es'].includes(locale))return null;
+ const key=locale+'|'+englishTitle;
+ if(localizedArticleTitles.has(key))return localizedArticleTitles.get(key);
+ const q=new URLSearchParams({
+   action:'query',prop:'langlinks',titles:englishTitle,
+   redirects:'1',lllang:locale,lllimit:'5',format:'json',origin:'*'
+ });
+ const response=await fetch('https://terraria.wiki.gg/api.php?'+q,{
+   signal,cache:'default',headers:{Accept:'application/json'}
+ });
+ if(!response.ok)throw Error('Language link HTTP '+response.status);
+ const data=await response.json();
+ const pages=Object.values(data.query?.pages||{});
+ const link=pages.flatMap(p=>p.langlinks||[]).find(l=>l.lang===locale);
+ const title=typeof link?.['*']==='string'?link['*']:null;
+ localizedArticleTitles.set(key,title);
+ return title;
+}
 async function fetchArticle(candidate,signal){
  const code=candidate.locale,base='https://terraria.wiki.gg'+(code==='en'?'':'/'+code)+'/api.php';
  const query=new URLSearchParams({action:'parse',page:candidate.title,prop:'text|displaytitle|revid',redirects:'1',format:'json',origin:'*'});
@@ -491,7 +511,25 @@ async function loadArticle(item,title){
  const controller=new AbortController();S.fetchController=controller;
  S.wikiLoaded=false;showLoader();
  const candidates=articleCandidates(item,title);
- for(const candidate of candidates){
+ const requested=(!item&&LANGS[S.articlePreferredLocale])?S.articlePreferredLocale:S.articleLanguage;
+ let didFindLocalizedTitle=false;
+ for(let i=0;i<candidates.length;i++){
+  const candidate=candidates[i];
+  // An armor-piece URL commonly redirects to an English set page; its
+  // Portuguese set title may have no direct translation in our item catalog.
+  // Resolve the Wiki language link before falling back to English.
+  if(candidate.locale==='en'&&requested!=='en'&&!didFindLocalizedTitle){
+   didFindLocalizedTitle=true;
+   try{
+    const english=item?.wikiTitle||item?.en||title;
+    const localTitle=await findLocalizedArticleTitle(english,requested,controller.signal);
+    if(controller.signal.aborted)return;
+    if(localTitle&&!candidates.some(c=>c.locale===requested&&c.title===localTitle)){
+      candidates.splice(i,0,{locale:requested,title:localTitle});
+      i--;continue;
+    }
+   }catch(error){if(controller.signal.aborted)return;console.warn('Article language link:',error.message)}
+  }
   try{
    const article=await fetchArticle(candidate,controller.signal);
    if(controller.signal.aborted)return;
