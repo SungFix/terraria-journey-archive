@@ -474,11 +474,11 @@ function bootEvents(){
   }
   if(a.dataset.localLink==='1'){
    if(e.metaKey||e.ctrlKey||e.shiftKey)return;
-   e.preventDefault();const u=new URL(a.href,location.href),p=u.searchParams;
+   e.preventDefault();const href=a.getAttribute('href')||'',p=new URLSearchParams(href.startsWith('?')?href.slice(1):href.split('?')[1]||'');
    if(p.has('item'))goToItem(+p.get('item'));else if(p.has('article'))goToTitle(p.get('article'));
   }
  });
- window.addEventListener('popstate',()=>{applyRoute();window.scrollTo(0,0)});
+ window.addEventListener('popstate',()=>{applyRoute();window.scrollTo(0,S.view==='list'?S.scrollY:0)});
  window.addEventListener('storage',e=>{
   if(['journey-archive-marked-v1','journey-archive-auto-sync-v1'].includes(e.key)){loadSaved();if(S.view==='list')renderList();else if(S.currentItem)showItemHeader(S.currentItem)}
   if(e.key==='journey-archive-lang-v1'&&LANGS[e.newValue])setLanguage(e.newValue);
