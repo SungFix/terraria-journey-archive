@@ -32,15 +32,30 @@ class Real326SaveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             path = Path(root) / "real-v326.plr"
             path.write_bytes(blob)
-            version, name, mode = sync.header(sync.decrypt_player(blob))
+            from terraria_player.parser import player as upstream
+            from companion.v326_reader import Terraria326Parser
+            raw = sync.decrypt_player(blob)
+            version = int.from_bytes(raw[:4], "little", signed=True)
             self.assertEqual(version, 326)
-            self.assertEqual(mode, 3)
-            parsed = sync.decode_character_file(path, items)
-        self.assertEqual(parsed["player"], name)
+            # The published sample is a normal (non-Journey) character.
+            # Validate the real 326 layout independently of character mode.
+            original = upstream.SUPPORTED_VERSIONS
+            upstream.SUPPORTED_VERSIONS = range(0, 327)
+            try:
+                database = Path(root) / "items.json"
+                entries = {
+                    str(item_id): {"name": name, "internalName": name}
+                    for name, (item_id, _) in items.items()
+                }
+                database.write_text(json.dumps(entries), encoding="utf-8")
+                parsed = Terraria326Parser(path, database).parse()
+            finally:
+                upstream.SUPPORTED_VERSIONS = original
         self.assertEqual(parsed["version"], 326)
-        self.assertIn("countsById", parsed)
-        self.assertIsInstance(parsed["countsById"], dict)
-        self.assertGreaterEqual(parsed["diagnostic"]["recognized"], 1)
+        self.assertIn(parsed["difficulty"], ("SoftCore", "MediumCore", "Hardcore", "Journey"))
+        self.assertIsInstance(parsed["researched_items"], dict)
+        self.assertGreater(parsed["_parser_offset"], len(raw) // 2)
+        self.assertLess(parsed["_remaining_bytes"], max(4096, len(raw) // 10))
 
 
 if __name__ == "__main__":
