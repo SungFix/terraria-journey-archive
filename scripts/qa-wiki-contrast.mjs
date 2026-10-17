@@ -94,6 +94,26 @@ for (const [name,lang] of cases) {
           return {eligible:refs.length,missing:refs.filter(i=>
             !i.children[1]?.classList.contains('wiki-item-separator')).length};
         })(),
+        itemAmounts:(()=>{
+          const amounts=[...document.querySelectorAll('#wikiContent span.i + span.am')]
+            .filter(el=>el.previousElementSibling?.querySelector('img'));
+          const sample=amounts.map(el=>{
+            const r=el.getBoundingClientRect(),itemRect=el.previousElementSibling.getBoundingClientRect();
+            const sameLine=Math.abs(r.top-itemRect.top)<20;
+            return {
+              label:el.previousElementSibling.textContent.trim().slice(0,35),
+              amount:el.textContent.trim(),
+              marked:el.classList.contains('journey-item-quantity'),
+              gap:sameLine?Math.round(r.left-itemRect.right):null
+            };
+          });
+          return {
+            found:amounts.length,
+            unformatted:sample.filter(e=>!e.marked||!e.amount.startsWith('× ')).length,
+            cramped:sample.filter(e=>e.gap!==null&&e.gap<5).length,
+            example:sample.slice(0,8)
+          };
+        })(),
         threeDSLogos:[...document.querySelectorAll('#wikiContent img')].filter(img=>{
           const src=img.getAttribute('src')||'',alt=img.getAttribute('alt')||'';
           return /(?:^|\/)(?:3ds|nintendo[_ -]?3ds)(?:[_ -]?(?:logo|icon))?\.(?:svg|png|webp|gif)(?:[?#/]|$)/i.test(src)
@@ -128,8 +148,8 @@ for (const [name,lang] of cases) {
       if(['rgb(248, 243, 232)','rgb(244, 238, 226)','rgb(250, 245, 235)'].includes(background))
         low.push({text:cell.text,problem:'light background returned'});
     }
-    const pass = !errors.length && !low.length && !audit.threeDSLogos.length && audit.itemSeparators.missing===0 && audit.overflow<=6 && audit.renderedText>150;
-    results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),itemSeparators:audit.itemSeparators,
+    const pass = !errors.length && !low.length && !audit.threeDSLogos.length && audit.itemSeparators.missing===0 && audit.itemAmounts.unformatted===0 && audit.itemAmounts.cramped===0 && (name!=='Iron Pickaxe'||audit.itemAmounts.found>=2) && audit.overflow<=6 && audit.renderedText>150;
+    results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),itemSeparators:audit.itemSeparators,itemAmounts:audit.itemAmounts,
       overflow:audit.overflow,threeDSLogos:audit.threeDSLogos,treeChain:audit.overflow>6?audit.treeChain:[],offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
     if(!pass)failures.push(name+' ('+width+'px): '+JSON.stringify(results.at(-1)));
     if(name==='Iron Pickaxe'||name==='Zenith'){
