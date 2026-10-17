@@ -47,10 +47,13 @@ class Version326Tests(unittest.TestCase):
         def fake_parse(_self):
             self.assertIn(326, self.parser_mod.SUPPORTED_VERSIONS)
             return response
-        with patch.object(sync, "parser_database", return_value=path), patch(
-            "terraria_player.PlayerParser.parse", new=fake_parse
-        ):
-            return sync.decode_character_file(path, ITEMS)
+        with tempfile.TemporaryDirectory() as tmp:
+            database = Path(tmp) / "items.json"
+            database.write_text('{"2": {"name": "Dirt", "internalName": "DirtBlock"}}', encoding="utf-8")
+            with patch.object(sync, "parser_database", return_value=database), patch(
+                "terraria_player.PlayerParser.parse", new=fake_parse
+            ):
+                return sync.decode_character_file(path, ITEMS)
 
     def test_326_can_sync_only_after_consistent_structural_parse(self):
         path, length = self.make_sample()
