@@ -605,3 +605,27 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
  .language{max-width:111px;font-size:11px}
  .icon-button{width:33px;height:35px}
 }
+
+
+/* Contrast fix: MediaWiki tables must never inherit beige zebra backgrounds. */
+#wikiContent .wiki-aside .infobox table.stat tr,
+#wikiContent .wiki-aside .infobox table tr{
+  background:#293b2f !important;
+  color:#f4edda !important;
+}
+#wikiContent .wiki-aside .infobox table.stat tr:nth-child(even),
+#wikiContent .wiki-aside .infobox table tr:nth-child(even){
+  background:#354b3a !important;
+}
+#wikiContent .wiki-aside .infobox table.stat td,
+#wikiContent .wiki-aside .infobox table.stat th,
+#wikiContent .wiki-aside .infobox table td,
+#wikiContent .wiki-aside .infobox table th{
+  background:transparent !important;
+  color:#f4edda !important;
+  font-size:12px;
+}
+#wikiContent .wiki-aside .infobox table.stat th a,
+#wikiContent .wiki-aside .infobox table td a{
+  color:#b5eee2 !important;
+}
