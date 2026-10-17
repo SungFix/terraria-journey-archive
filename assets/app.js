@@ -357,9 +357,9 @@ function wikiDocument(html,locale){
  // following an icon; this covers crafting ingredients, drops and stations.
  for(const itemLink of root.querySelectorAll('span.i')){
   const iconLink=itemLink.firstElementChild;
-  const nameWrapper=iconLink?.nextElementSibling;
-  if(iconLink?.tagName!=='A'||!iconLink.querySelector('img')||
-     nameWrapper?.tagName!=='SPAN'||!nameWrapper.textContent.trim())continue;
+  const nameWrapper=[...itemLink.children].slice(1)
+   .find(el=>el.tagName==='SPAN'&&el.textContent.trim());
+  if(iconLink?.tagName!=='A'||!iconLink.querySelector('img')||!nameWrapper)continue;
   const bullet=doc.createElement('span');
   bullet.className='wiki-item-separator';
   bullet.textContent='•';
