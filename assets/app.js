@@ -90,12 +90,13 @@ function isArmorPiece(item){
 }
 function spriteURL(item,attempt){
  const filename=encodeURIComponent(String(item.wikiTitle||item.en).replace(/ /g,'_')+'.png');
- const official='https://terraria.wiki.gg/wiki/Special:Redirect/file/'+filename;
+ const official='https://terraria.wiki.gg/images/'+filename;
+ const redirect='https://terraria.wiki.gg/wiki/Special:Redirect/file/'+filename;
  const external='https://raw.githubusercontent.com/natan-dot-com/Terraria-Dataset/master/img_sprites/'+filename;
- // The third-party sprite source sometimes shows the ENTIRE EQUIPPED SET
- // for an armor piece. Use the isolated official inventory sprite first.
- return isArmorPiece(item)?(attempt===0?official:external)
-                          :(attempt===0?external:official);
+ // A third-party asset with this name can depict an entire armor SET.
+ // Never use it as the fallback for a helmet, chestplate or greaves.
+ return isArmorPiece(item)?(attempt===0?official:redirect)
+                          :(attempt===0?external:redirect);
 }
 function makeSprite(item){
  const wrap=document.createElement('div');wrap.className='sprite-wrap';
