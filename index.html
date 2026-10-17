@@ -110,7 +110,19 @@
           <div><div class="spinner" aria-hidden="true"></div><p id="loaderText">Carregando artigo completo da Terraria Wiki...</p></div>
         </div>
         <div class="article-frame" id="articleFrame" hidden>
-          <header><strong id="articleLabel">Artigo completo · Terraria Wiki</strong><span id="articleLang" class="wiki-lang"></span></header>
+          <header class="wiki-article-header">
+            <strong id="articleLabel">Informações do item · Terraria Wiki</strong>
+            <div class="wiki-article-controls">
+              <span id="articleLang" class="wiki-lang"></span>
+              <label class="wiki-language-label" for="articleLanguage"><span id="articleLanguageLabel">Idioma do artigo</span>
+                <select id="articleLanguage" aria-label="Idioma do artigo">
+                  <option value="pt">🇧🇷 Português</option>
+                  <option value="en">🇺🇸 English</option>
+                  <option value="es">🇪🇸 Español</option>
+                </select>
+              </label>
+            </div>
+          </header>
           <article id="wikiContent" class="wiki-content" aria-label="Artigo completo da wiki"></article>
           <footer id="articleCredit" class="article-credit"></footer>
         </div>
