@@ -90,5 +90,55 @@ class Version326Tests(unittest.TestCase):
             sync.decode_character_file(path, ITEMS)
 
 
+    def test_partial_research_from_tail_parse_is_kept(self):
+        path, length = self.make_sample()
+        code = """
+def parse(self):
+    player = {
+        "name": "Tester", "version": 326, "difficulty": "Journey",
+        "researched_items": {"DirtBlock": 100, "StoneBlock": 10},
+    }
+    reader = type("R", (), {"tell": lambda self: LENGTH - 64})()
+    raise ValueError("Invalid 7-bit encoded integer")
+"""
+        module_ns = dict(self.parser_mod.__dict__)
+        module_ns["LENGTH"] = length
+        exec(code, module_ns)
+        test_parser = module_ns["parse"]
+        # The test function must appear as the parser's own module to let
+        # tracing capture exactly what it would on an actual v326 save.
+        with tempfile.TemporaryDirectory() as tmp:
+            database = Path(tmp) / "items.json"
+            database.write_text('{"2": {"name": "Dirt", "internalName": "DirtBlock"}}', encoding="utf-8")
+            with patch.object(sync, "parser_database", return_value=database), patch(
+                "terraria_player.PlayerParser.parse", new=test_parser
+            ):
+                result = sync.decode_character_file(path, ITEMS)
+        self.assertEqual(result["countsById"], {"2": 100, "3": 10})
+        self.assertTrue(result["diagnostic"]["partial"])
+        self.assertEqual(result["diagnostic"]["trailingBytes"], 64)
+
+    def test_error_before_research_never_marks(self):
+        path, length = self.make_sample()
+        code = """
+def parse(self):
+    player = {"name": "Tester", "version": 326, "difficulty": "Journey"}
+    reader = type("R", (), {"tell": lambda self: LENGTH // 2})()
+    raise ValueError("Invalid 7-bit encoded integer")
+"""
+        module_ns = dict(self.parser_mod.__dict__)
+        module_ns["LENGTH"] = length
+        exec(code, module_ns)
+        test_parser = module_ns["parse"]
+        with tempfile.TemporaryDirectory() as tmp:
+            database = Path(tmp) / "items.json"
+            database.write_text('{"2": {"name": "Dirt", "internalName": "DirtBlock"}}', encoding="utf-8")
+            with patch.object(sync, "parser_database", return_value=database), patch(
+                "terraria_player.PlayerParser.parse", new=test_parser
+            ):
+                with self.assertRaisesRegex(ValueError, "tabela_pesquisa=não alcançada"):
+                    sync.decode_character_file(path, ITEMS)
+
+
 if __name__ == "__main__":
     unittest.main()
