@@ -99,18 +99,19 @@ for (const [name,lang] of cases) {
             .filter(el=>el.previousElementSibling?.querySelector('img'));
           const sample=amounts.map(el=>{
             const r=el.getBoundingClientRect(),itemRect=el.previousElementSibling.getBoundingClientRect();
-            const sameLine=Math.abs(r.top-itemRect.top)<20;
+            const marginLeft=parseFloat(getComputedStyle(el).marginLeft)||0;
             return {
               label:el.previousElementSibling.textContent.trim().slice(0,35),
               amount:el.textContent.trim(),
               marked:el.classList.contains('journey-item-quantity'),
-              gap:sameLine?Math.round(r.left-itemRect.right):null
+              marginLeft,
+              gap:Math.abs(r.top-itemRect.top)<6?Math.round(r.left-itemRect.right):null
             };
           });
           return {
             found:amounts.length,
             unformatted:sample.filter(e=>!e.marked||!e.amount.startsWith('× ')).length,
-            cramped:sample.filter(e=>e.gap!==null&&e.gap<5).length,
+            cramped:sample.filter(e=>e.marginLeft<6).length,
             example:sample.slice(0,8)
           };
         })(),
