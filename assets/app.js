@@ -83,11 +83,19 @@ function getSubmitted(item){
 function autoDone(item){return getSubmitted(item)>=item.qty}
 function isDone(item){return S.manual.has(item.id)||autoDone(item)}
 function totals(){const done=S.items.reduce((n,item)=>n+(isDone(item)?1:0),0);return{done,total:S.items.length,percent:S.items.length?Math.round(done/S.items.length*100):0}}
+function isArmorPiece(item){
+ // Classify helmet, chest and leg armor, including variant names used for
+ // Hallowed, Shroomite and vanity pieces. Image URLs remain item-specific.
+ return classify(item)==='armor'||/\\b(?:Headgear|Headpiece|Helm|Helmet|Hood|Hat|Mask|Breastplate|Chestplate|Chainmail|Plate Mail|Greaves|Leggings|Pants|Shirt)\\b/i.test(item.en||'');
+}
 function spriteURL(item,attempt){
  const filename=encodeURIComponent(String(item.wikiTitle||item.en).replace(/ /g,'_')+'.png');
- return attempt===0
-  ?'https://raw.githubusercontent.com/natan-dot-com/Terraria-Dataset/master/img_sprites/'+filename
-  :'https://terraria.wiki.gg/wiki/Special:Redirect/file/'+filename;
+ const official='https://terraria.wiki.gg/wiki/Special:Redirect/file/'+filename;
+ const external='https://raw.githubusercontent.com/natan-dot-com/Terraria-Dataset/master/img_sprites/'+filename;
+ // The third-party sprite source sometimes shows the ENTIRE EQUIPPED SET
+ // for an armor piece. Use the isolated official inventory sprite first.
+ return isArmorPiece(item)?(attempt===0?official:external)
+                          :(attempt===0?external:official);
 }
 function makeSprite(item){
  const wrap=document.createElement('div');wrap.className='sprite-wrap';
@@ -265,7 +273,7 @@ function articleCandidates(item,title){
 }
 async function fetchArticle(candidate,signal){
  const code=candidate.locale,base='https://terraria.wiki.gg'+(code==='en'?'':'/'+code)+'/api.php';
- const query=new URLSearchParams({action:'parse',page:candidate.title,prop:'text|displaytitle|revid',format:'json',origin:'*'});
+ const query=new URLSearchParams({action:'parse',page:candidate.title,prop:'text|displaytitle|revid',redirects:'1',format:'json',origin:'*'});
  const key=code+'|'+candidate.title;
  if(S.articleCache.has(key))return S.articleCache.get(key);
  const response=await fetch(base+'?'+query,{cache:'default',signal,headers:{Accept:'application/json'}});
@@ -284,7 +292,7 @@ function allowedURL(value,base){
   return url;
  }catch(e){return null}
 }
-function wikiDocument(html,locale){
+function wikiDocument(html,locale,item=null){
  /* Insert only safe content from the public MediaWiki parse API.
     Script, event attributes, HTML forms and unsafe URL schemes are removed. */
  const doc=new DOMParser().parseFromString(html,'text/html');
@@ -377,10 +385,33 @@ function wikiDocument(html,locale){
    if(/^\d[\d., ]*$/.test(raw))amount.textContent='× '+raw;
   }
  }
- // The official wiki normally floats its infobox. We keep every section,
- // but place the infobox in an independent readable column instead of letting
- // the wiki's wide tables and floats overlap the text.
- const infobox=root.querySelector(':scope > .infobox.item, :scope > .infobox');
+ // Armor-piece links redirect to the *entire set's* Wiki page.
+ // Identify the exact requested equipment piece by its INTERNAL ITEM ID,
+ // never by the position of the box, because sets can contain variants.
+ let infobox=root.querySelector(':scope > .infobox.item, :scope > .infobox');
+ if(item&&isArmorPiece(item)){
+   const expected=String(item.id);
+   const idRegex=new RegExp('(?:^|\\\\D)'+expected+'(?:\\\\D|$)');
+   const candidates=[...root.querySelectorAll('.infobox.item')];
+   const exact=candidates.find(box=>{
+     const fields=[...box.querySelectorAll('.ids, .section.ids, [class*="item-id"]')];
+     const raw=fields.length?fields.map(node=>node.textContent||'').join(' '):'';
+     return idRegex.test(raw);
+   });
+   const labels=[item.en,item.pt,item.es,item.wikiTitle].filter(Boolean).map(keyName);
+   const named=candidates.find(box=>{
+     const title=box.querySelector(':scope > .title')?.textContent||'';
+     return labels.includes(keyName(title));
+   });
+   infobox=exact||named||infobox;
+   if(exact||named){
+     infobox.classList.add('journey-exact-armor-piece');
+     // The item page stays complete (recipes, set bonuses and history),
+     // while the requested piece becomes the sidebar's primary infobox.
+     const selectedSprite=infobox.querySelector('.images img[src], .images img[data-src]');
+     if(selectedSprite)infobox.dataset.pieceSprite=selectedSprite.getAttribute('src')||selectedSprite.getAttribute('data-src')||'';
+   }
+ }
  if(infobox)infobox.remove();
 
  // Keep the original index while making it collapsible rather than filling
@@ -450,7 +481,18 @@ async function loadArticle(item,title){
   try{
    const article=await fetchArticle(candidate,controller.signal);
    if(controller.signal.aborted)return;
-   const container=$('#wikiContent');container.replaceChildren(wikiDocument(article.html,article.locale));
+   const container=$('#wikiContent');container.replaceChildren(wikiDocument(article.html,article.locale,item));
+   if(item&&isArmorPiece(item)){
+     const box=container.querySelector('.journey-exact-armor-piece');
+     const icon=box?.dataset.pieceSprite;
+     const url=icon?allowedURL(icon,'https://terraria.wiki.gg/'):null;
+     if(url&&(url.hostname==='terraria.wiki.gg'||url.hostname.endsWith('.wiki.gg'))){
+       // Match the item heading image to the isolated, verified Wiki sprite.
+       const img=$('#detailSprite img.sprite');
+       if(img){img.src=url.href;img.dataset.try='2';img.hidden=false;
+         const fallback=img.nextElementSibling;if(fallback)fallback.hidden=true}
+     }
+   }
    container.lang=article.locale==='pt'?'pt-BR':article.locale==='es'?'es':'en';
    if(article.locale!==S.articleLanguage){
      const note=document.createElement('p');note.className='wiki-translation-notice';
