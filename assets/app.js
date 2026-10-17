@@ -336,8 +336,50 @@ function wikiDocument(html,locale){
   }
   /* Wikitext tables can have incidental inline widths; CSS scrolls them. */
  }
+ // The official wiki normally floats its infobox. We keep every section,
+ // but place the infobox in an independent readable column instead of letting
+ // the wiki's wide tables and floats overlap the text.
+ const infobox=root.querySelector(':scope > .infobox.item, :scope > .infobox');
+ if(infobox)infobox.remove();
+
+ // Keep the original index while making it collapsible rather than filling
+ // the top of the article with a very tall contents box.
+ for(const toc of [...root.querySelectorAll(':scope > .toc')]){
+   const details=document.createElement('details');
+   details.className='wiki-toc-details';
+   const summary=document.createElement('summary');
+   summary.textContent=locale==='pt'?'Índice do artigo':locale==='es'?'Índice del artículo':'Article contents';
+   details.appendChild(summary);
+   toc.replaceWith(details);
+   details.appendChild(toc);
+ }
+ // The original long inter-template navigation boxes are still available,
+ // but grouped at the end so the actual item information comes first.
+ const navs=[...root.querySelectorAll(':scope > .ranger-navbox, :scope > .navbox')];
+ if(navs.length){
+   const details=document.createElement('details');
+   details.className='wiki-extra-navigation';
+   const summary=document.createElement('summary');
+   summary.textContent=locale==='pt'?'Mais páginas e categorias':locale==='es'?'Más páginas y categorías':'More categories and pages';
+   details.appendChild(summary);
+   for(const nav of navs)details.appendChild(nav);
+   root.appendChild(details);
+ }
+ const layout=document.createElement('div');
+ layout.className='wiki-article-layout'+(infobox?'':' wiki-article-no-side');
+ const content=document.createElement('div');
+ content.className='wiki-main';
+ while(root.firstChild)content.appendChild(root.firstChild);
+ layout.appendChild(content);
+ if(infobox){
+   const aside=document.createElement('aside');
+   aside.className='wiki-aside';
+   aside.setAttribute('aria-label',locale==='pt'?'Atributos e informações do item':locale==='es'?'Atributos del objeto':'Item attributes');
+   aside.appendChild(infobox);
+   layout.appendChild(aside);
+ }
  const fragment=document.createDocumentFragment();
- while(root.firstChild)fragment.appendChild(root.firstChild);
+ fragment.appendChild(layout);
  return fragment;
 }
 function showLoader(message){
