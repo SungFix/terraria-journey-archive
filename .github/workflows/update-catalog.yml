@@ -1,6 +1,11 @@
 name: Update Terraria research catalog
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/update_catalog.py'
+      - '.github/workflows/update-catalog.yml'
   schedule:
     - cron: '30 7 * * 1'
 jobs:
