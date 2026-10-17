@@ -840,3 +840,56 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
    padding:2px 5px;
  }
 }
+
+
+/* Focused equipment information: an armor piece uses its own Wiki card,
+   while the rest of the complete armor set stays available on demand. */
+#wikiContent .wiki-aside .journey-exact-armor-piece {
+  border:2px solid #8ec487!important;
+  box-shadow:0 0 0 2px #223b2a,0 12px 24px #0d1d1099!important;
+}
+#wikiContent .journey-other-armor-pieces {
+  margin:12px 0 20px;
+  padding:0;
+  background:#2a3e30;
+  border:1px solid #66865e;
+  border-radius:6px;
+  overflow:hidden;
+  max-width:100%;
+}
+#wikiContent .journey-other-armor-pieces>summary {
+  cursor:pointer;
+  background:#385341;
+  color:#dcf3ca;
+  font-weight:700;
+  font-size:13px;
+  padding:11px 14px;
+}
+#wikiContent .journey-other-armor-pieces>summary:hover {background:#426349}
+#wikiContent .journey-other-armor-pieces[open]>summary {border-bottom:1px solid #789a71}
+#wikiContent .journey-other-armor-pieces>.infobox-wrapper {
+  float:none!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px;
+  max-width:100%;
+}
+#wikiContent .journey-other-armor-pieces .infobox.item {
+  float:none!important;
+  width:min(245px,100%)!important;
+  max-width:100%!important;
+  border:1px solid #78946b!important;
+  background:#283e31!important;
+}
+#wikiContent .journey-other-armor-pieces .infobox.item>.title {
+  background:#3e5f43!important;
+  color:#f2f3d9!important;
+  font-weight:bold;
+  text-align:center;
+}
+#wikiContent .journey-other-armor-pieces :is(table,td,th) {
+  background:#293e31!important;
+  color:#f1f0e5!important;
+}
