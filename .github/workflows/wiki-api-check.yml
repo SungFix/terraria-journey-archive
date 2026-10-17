@@ -1,0 +1,27 @@
+name: Verify Terraria Wiki integration
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/wiki-api-check.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check official MediaWiki API response
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.parse, json
+          host='https://terraria.wiki.gg/api.php'
+          for kind,args in [
+           ('parse',{'action':'parse','page':'Iron_Pickaxe','prop':'text|displaytitle','format':'json','origin':'*'}),
+           ('query',{'action':'query','meta':'siteinfo','siprop':'rightsinfo','format':'json','origin':'*'})]:
+           url=host+'?'+urllib.parse.urlencode(args)
+           try:
+            req=urllib.request.Request(url,headers={'User-Agent':'JourneyArchiveWikiCheck/1.0 (Noncommercial independent project)'})
+            with urllib.request.urlopen(req,timeout=14) as r:
+              body=r.read(2000)
+              print(kind,'STATUS',r.status,'CORS',r.headers.get('access-control-allow-origin'),'TYPE',r.headers.get('content-type'),'SNIPPET',body[:180].decode('utf-8','replace'))
+           except Exception as e:
+            print(kind,'ERROR',type(e).__name__,str(e)[:240])
+          PY
