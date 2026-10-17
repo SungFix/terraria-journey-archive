@@ -1,0 +1,21 @@
+Journey Archive Sync - Terraria Modo Jornada
+==========================================
+
+Para baixar o aplicativo .exe pronto:
+https://github.com/SungFix/terraria-journey-archive/actions/workflows/build-sync-windows.yml
+
+Abra uma execucao bem-sucedida, escolha Artifacts > JourneyArchiveSync-Windows e extraia o ZIP.
+Execute JourneyArchiveSync.exe e selecione o personagem. Mantenha o programa aberto.
+
+Site: https://sungfix.github.io/terraria-journey-archive/
+
+Depois da primeira selecao, o aplicativo sincroniza automaticamente ao salvar o jogo.
+Comandos extras no Prompt de Comando:
+  JourneyArchiveSync.exe --select
+  JourneyArchiveSync.exe --install-startup
+  JourneyArchiveSync.exe --remove-startup
+
+IMPORTANTE: programa independente sem assinatura digital. Nunca e necessario
+modificar ou enviar seu arquivo .plr para sincronizar.
+
+O recurso foi validado com saves artificiais e requer teste com um save real.
