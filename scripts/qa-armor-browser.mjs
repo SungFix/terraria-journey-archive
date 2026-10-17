@@ -28,8 +28,14 @@ for(const tc of cases){
     if(url.startsWith(base))return route.continue();
     if(url.includes('/api.php?')&&url.includes('terraria.wiki.gg')){
       const api=new URL(url);const locale=api.pathname.startsWith('/pt/')?'pt':'en';
+      if(api.searchParams.get('action')==='query'){
+        return route.fulfill({status:200,contentType:'application/json',
+          headers:{'access-control-allow-origin':'*'},
+          body:JSON.stringify({query:{pages:{100:{pageid:100,title:'Molten armor',
+            langlinks:[{lang:'pt','*':'Armadura Derretida'}]}}}})});
+      }
       const name=(api.searchParams.get('page')||'').replaceAll('_',' ');
-      const routeName=locale==='pt'&&['Elmo Derretido','Molten Helmet'].includes(name)?'Molten_Helmet':name.replaceAll(' ','_');
+      const routeName=name.replaceAll(' ','_');
       const filepath=fixtureDir+'/'+locale+'_'+routeName+'.json';
       if(fs.existsSync(filepath))
         return route.fulfill({status:200,contentType:'application/json',
