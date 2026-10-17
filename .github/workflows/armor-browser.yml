@@ -31,7 +31,7 @@ jobs:
           dst=pathlib.Path('tests/armor-api-fixtures')
           dst.mkdir(parents=True,exist_ok=True)
           cases=[
-            ('en','Molten Helmet'),('pt','Molten Helmet'),
+            ('en','Molten Helmet'),('pt','Elmo Derretido'),
             ('en','Molten Breastplate'),('en','Molten Greaves'),
             ('en','Copper Helmet'),('en','Hallowed Helmet'),
             ('en','Solar Flare Helmet'),('en','Nebula Helmet')]
@@ -46,6 +46,9 @@ jobs:
               raise RuntimeError(f'No armor article: {locale}, {title}')
             filename=locale+'_'+title.replace(' ','_')+'.json'
             (dst/filename).write_text(json.dumps(data),encoding='utf8')
+            if locale=='pt':
+              alias=locale+'_'+data['parse']['title'].replace(' ','_')+'.json'
+              (dst/alias).write_text(json.dumps(data),encoding='utf8')
             print(locale,title,'->',data['parse']['title'],len(data['parse']['text']['*']))
           PY
       - name: Run armor article & sprite browser regression
