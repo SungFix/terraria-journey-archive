@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#382b24">
   <meta name="description" content="Lista completa de pesquisas do Modo Jornada do Terraria. Acompanhe itens pesquisados e leia artigos completos da Terraria Wiki dentro do próprio site.">
   <title>Journey Archive · Terraria Modo Jornada</title>
-  <link rel="stylesheet" href="assets/app.css?v=20261017-legibilidade-3">
+  <link rel="stylesheet" href="assets/app.css?v=20261017-contraste-todos-4">
   <style id="fix-atributos-escuros">
     /* Garante contraste mesmo se uma folha de estilos antiga estiver em cache. */
     #wikiContent .wiki-aside .infobox table.stat tr,
@@ -22,6 +22,21 @@
     #wikiContent .wiki-aside .infobox table th,
     #wikiContent .wiki-aside .infobox table td {
       background: transparent !important;
+      color: #f4edda !important;
+    }
+    /* Mesma correção para qualquer tabela em todos os artigos. */
+    #wikiContent .wiki-article-layout table tr {
+      background-color: #293b2f !important;
+      color: #f4edda !important;
+    }
+    #wikiContent .wiki-article-layout table tr:nth-child(even),
+    #wikiContent .wiki-article-layout table tr:nth-child(even) > :is(td,th) {
+      background-color: #354b3a !important;
+    }
+    #wikiContent .wiki-article-layout table tr:nth-child(odd) > :is(td,th) {
+      background-color: #293b2f !important;
+    }
+    #wikiContent .wiki-article-layout table :is(td,th) {
       color: #f4edda !important;
     }
   </style>
