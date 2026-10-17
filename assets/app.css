@@ -893,3 +893,36 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   background:#293e31!important;
   color:#f1f0e5!important;
 }
+
+/* Espaçamento uniforme: ícone • nome   quantidade, em todas as receitas. */
+#wikiContent .wiki-article-layout span.i{
+  display:inline-flex!important;
+  align-items:center!important;
+  column-gap:6px!important;
+  vertical-align:middle!important;
+  margin-right:7px!important;
+}
+#wikiContent .wiki-article-layout span.i > a:has(img){
+  display:inline-flex!important;
+  align-items:center!important;
+  flex-shrink:0!important;
+  margin-right:2px!important;
+}
+#wikiContent .wiki-article-layout span.i > .wiki-item-separator{
+  margin:0 5px!important;
+}
+#wikiContent .wiki-article-layout span.i + :is(.am,.amount,.item-amount,.stack-count),
+#wikiContent .wiki-article-layout span.i ~ :is(.am,.amount,.item-amount,.stack-count){
+  margin-left:9px!important;
+  padding:2px 6px!important;
+  display:inline-block!important;
+  vertical-align:middle!important;
+  white-space:nowrap!important;
+  border-radius:4px;
+  background:#334a39!important;
+  color:#f5e7b6!important;
+}
+@media(max-width:600px){
+ #wikiContent .wiki-article-layout span.i{column-gap:4px!important;margin-right:5px!important}
+ #wikiContent .wiki-article-layout span.i > .wiki-item-separator{margin:0 4px!important}
+}
