@@ -124,7 +124,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 .wiki-content table{border-collapse:collapse;font-size:12px;max-width:100%;margin:12px 0;display:block;overflow-x:auto;background:#f8f3e8}
 .wiki-content th,.wiki-content td{padding:7px 9px;border:1px solid #c8b9a0;vertical-align:top;min-width:35px}
 .wiki-content th{background:#e1d2b5;color:#373029}
-.wiki-content tr:nth-child(even){background:#f4eee2}
+.wiki-content .wiki-main tr:nth-child(even){background:#314333}
 .wiki-content img{max-width:100%;height:auto;image-rendering:pixelated}
 .wiki-content .infobox,.wiki-content .terraria{background:#e8ddc8;border:1px solid #c6b08b}
 .wiki-content .infobox{float:right;clear:right;max-width:min(300px,100%);margin:1px 0 20px 18px;display:table}
@@ -415,9 +415,27 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   line-height:1.45;
   padding:9px 6px;
   font-weight:500;
-  font-size:11px;
+  font-size:12px;
   overflow-wrap:anywhere;
   vertical-align:middle;
+}
+.wiki-content .wiki-aside .infobox table.stat tr,
+.wiki-content .wiki-aside .infobox table tr{
+  background-color:#293b2f!important;
+  color:#f4edda!important;
+}
+.wiki-content .wiki-aside .infobox table.stat tr:nth-child(even),
+.wiki-content .wiki-aside .infobox table tr:nth-child(even){
+  background-color:#354b3a!important;
+}
+.wiki-content .wiki-aside .infobox table.stat th,
+.wiki-content .wiki-aside .infobox table.stat td,
+.wiki-content .wiki-aside .infobox table th,
+.wiki-content .wiki-aside .infobox table td{
+  background-color:transparent!important;
+  color:#f4edda!important;
+  font-size:12px;
+  line-height:1.5;
 }
 .wiki-content .wiki-aside .infobox table.stat th,
 .wiki-content .wiki-aside .infobox table th{
