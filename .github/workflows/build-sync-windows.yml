@@ -19,7 +19,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Instalar dependências
-        run: python -m pip install cryptography pyinstaller
+        run: python -m pip install cryptography pyinstaller "terraria-player @ git+https://github.com/royalrizen/Terraria-Plr-Editor.git@0c514f6e2225c961155b9350068c2b20ef8ac833"
+      - name: Verificar biblioteca de leitura 1.4.5
+        run: python -c "from terraria_player import PlayerParser; print(PlayerParser.__name__)"
       - name: Testar leitura segura de pesquisas
         run: python -m unittest discover -s tests -v
       - name: Gerar aplicativo exe
