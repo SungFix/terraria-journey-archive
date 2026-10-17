@@ -411,13 +411,15 @@ function wikiDocument(html,locale,item=null){
  // never by the position of the box, because sets can contain variants.
  let infobox=root.querySelector(':scope > .infobox.item, :scope > .infobox');
  if(item&&isArmorPiece(item)){
-   const expected=String(item.id);
-   const idRegex=new RegExp('(?:^|\\D)'+expected+'(?:\\D|$)');
+   const expected=Number(item.id);
    const candidates=[...root.querySelectorAll('.infobox.item')];
    const exact=candidates.find(box=>{
      const fields=[...box.querySelectorAll('.ids, .section.ids, [class*="item-id"]')];
-     const raw=fields.length?fields.map(node=>node.textContent||'').join(' '):'';
-     return idRegex.test(raw);
+     const raw=fields.map(node=>node.textContent||'').join(' ');
+     // The first ID in a Wiki item card is the ITEM ID; later numbers
+     // can be armor IDs shared by other pieces of the same set.
+     const first=raw.match(/\d+/);
+     return Boolean(first)&&Number(first[0])===expected;
    });
    const labels=[item.en,item.pt,item.es,item.wikiTitle].filter(Boolean).map(keyName);
    const named=candidates.find(box=>{
