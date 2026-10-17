@@ -293,7 +293,7 @@ function wikiDocument(html,locale){
  for(const el of [...root.querySelectorAll('*')]){
   for(const attr of [...el.attributes]){
    const n=attr.name.toLowerCase();
-   if(n.startsWith('on')||n==='style'||n==='srcset'||n==='formaction'||n==='autofocus'||n==='contenteditable'||n==='id'&&attr.value.length>200)el.removeAttribute(attr.name);
+   if(n.startsWith('on')||['style','bgcolor','background','color','bordercolor','srcset','formaction','autofocus','contenteditable'].includes(n)||(n==='id'&&attr.value.length>200))el.removeAttribute(attr.name);
   }
   if(el.id)el.id='article-'+el.id;
   if(el.tagName==='IMG'){
