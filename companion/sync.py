@@ -162,37 +162,123 @@ def research_at(data: bytes, offset: int, items: dict[str, tuple[int, int]]) -> 
     return counts, unknown_keys, n
 
 
-def extract_research(data: bytes, items: dict[str, tuple[int, int]]) -> tuple[dict[int, int], int]:
-    # Research data is near the end of a save. Scan only candidates with a
-    # reasonable list count and an item key matching the known ID mapping.
+def research_tail_quality(data: bytes, pos: int, version: int) -> int:
+    """Validate fields immediately following a research list.
+
+    Terraria 1.4.x: 1 byte flags (4 optional 9-byte item slots), journey
+    settings bool/key/value list, super-cart flags, then loadout index.
+    Each validated structure increases confidence without guessing items.
+    Returns 0 for malformed continuation, 1..3 for validated sections.
+    """
+    if pos >= len(data):
+        return 0
+    flags = data[pos]
+    pos += 1
+    if flags & 0xf0:
+        return 0
+    for i in range(4):
+        if flags & (1 << i):
+            if pos + 9 > len(data):
+                return 0
+            item_id, stack = struct.unpack_from("<ii", data, pos)
+            prefix = data[pos + 8]
+            if not -1 <= item_id <= 10000 or not 0 <= stack <= 1000000 or prefix > 120:
+                return 0
+            pos += 9
+    quality = 1
+    if version >= 220:
+        seen_keys = set()
+        for _ in range(8):
+            if pos >= len(data) or data[pos] not in (0, 1):
+                return quality
+            has_next = data[pos]
+            pos += 1
+            if not has_next:
+                quality = 2
+                break
+            if pos + 2 > len(data):
+                return quality
+            key = struct.unpack_from('<h', data, pos)[0]
+            pos += 2
+            if key in seen_keys or key not in (5, 11, 14):
+                return quality
+            seen_keys.add(key)
+            if key == 14:
+                if pos + 4 > len(data):
+                    return quality
+                value = struct.unpack_from('<f', data, pos)[0]
+                if not -1000 <= value <= 1000:
+                    return quality
+                pos += 4
+            else:
+                if pos >= len(data) or data[pos] not in (0, 1):
+                    return quality
+                pos += 1
+        else:
+            return quality
+    if version >= 253:
+        if pos >= len(data) or data[pos] & 0xfc:
+            return quality
+        pos += 1
+    if version >= 262:
+        if pos + 4 > len(data):
+            return quality
+        selected = struct.unpack_from('<i', data, pos)[0]
+        if selected not in (0, 1, 2):
+            return quality
+    return 3 if version >= 262 else quality
+
+
+def extract_research(data: bytes, items: dict[str, tuple[int, int]]) -> tuple[dict[int, int], dict[str, int]]:
+    # Look for a self-consistent research table, then validate the following
+    # Terraria structures to disambiguate repeated binary candidates.
+    version = struct.unpack_from('<i', data, 0)[0]
     minimum = max(30, int(len(data) * .20))
-    winners = []
+    candidates = []
     for pos in range(minimum, len(data) - 12):
-        n = struct.unpack_from("<i", data, pos)[0]
+        n = struct.unpack_from('<i', data, pos)[0]
         if not 1 <= n <= 9000 or pos + 4 + n * 6 + 1 > len(data):
             continue
         first_length = data[pos + 4]
         if first_length < 2 or first_length > 91 or pos + 5 + first_length > len(data):
             continue
-        # Fast reject: unrecognized strings should not trigger expensive parse.
         try:
-            name = data[pos+5:pos+5+first_length].decode("ascii")
+            name = data[pos + 5:pos + 5 + first_length].decode('ascii')
         except UnicodeDecodeError:
             continue
-        if name.split(":", 1)[-1] not in items and n <= 2:
+        if name.split(':', 1)[-1] not in items and n <= 2:
             continue
         result = research_at(data, pos, items)
-        if result is not None:
-            counts, unknown_by_key, found = result
-            winners.append((found - len(unknown_by_key), found, pos, counts, unknown_by_key))
-    if not winners:
-        raise ValueError("Lista de pesquisas não reconhecida neste save. Nada foi marcado.")
-    winners.sort(reverse=True)
-    best = winners[0]
-    # In case of ambiguity, fail rather than sync the wrong data.
-    if len(winners) > 1 and winners[1][:2] == best[:2]:
-        raise ValueError("Lista de pesquisas ambígua neste save. Nada foi marcado.")
-    return best[3], best[4]
+        if result is None:
+            continue
+        counts, unknown_keys, found = result
+        # Compute end offset exactly; don't assume a fixed list byte length.
+        cursor = pos + 4
+        for _ in range(found):
+            _, cursor = read_string(data, cursor)
+            cursor += 4
+        quality = research_tail_quality(data, cursor, version)
+        if quality == 0:
+            continue
+        known = found - len(unknown_keys)
+        signature = (tuple(sorted(counts.items())), tuple(sorted(unknown_keys.items())))
+        candidates.append((known, found, quality, pos, signature, counts, unknown_keys))
+
+    if not candidates:
+        raise ValueError('Lista de pesquisas não reconhecida neste save. Nada foi marcado.')
+    # Prefer the biggest coherent list; structural validation breaks ties.
+    candidates.sort(key=lambda c: (c[0], c[1], c[2]), reverse=True)
+    best = candidates[0]
+    ties = [candidate for candidate in candidates if candidate[:3] == best[:3]]
+    # Duplicate occurrences with exactly the same item quantities are NOT
+    # ambiguous: they would produce precisely the same site progress.
+    distinct_signatures = {candidate[4] for candidate in ties}
+    if len(distinct_signatures) > 1:
+        raise ValueError(
+            f'Lista de pesquisas ambígua: {len(ties)} candidatos, '
+            f'{best[1]} registros e qualidade {best[2]}. Nada foi marcado.'
+        )
+    return best[5], best[6]
 
 
 def decode_save(blob: bytes, items: dict[str, tuple[int, int]]) -> dict:
@@ -271,6 +357,7 @@ class SyncService:
         self.player = player
         self.items = items
         self.signature = None
+        self.last_error = None
 
     def refresh(self):
         try:
@@ -287,6 +374,7 @@ class SyncService:
                 STATE.clear()
                 STATE.update(result)
             self.signature = signature
+            self.last_error = None
             print(f"[{datetime.now():%H:%M:%S}] {result['player']}: {len(result['countsById'])} pesquisas identificadas")
         except Exception as exc:
             # Preserve last valid counts, but stop the website from applying them
@@ -295,7 +383,9 @@ class SyncService:
                 STATE["ok"] = False
                 STATE["message"] = str(exc)
             self.signature = None
-            print(f"[{datetime.now():%H:%M:%S}] Aguardando save válido: {exc}")
+            if str(exc) != self.last_error:
+                print(f"[{datetime.now():%H:%M:%S}] Aguardando save válido: {exc}")
+                self.last_error = str(exc)
 
 
 def monitor(service: SyncService, stop: threading.Event):
