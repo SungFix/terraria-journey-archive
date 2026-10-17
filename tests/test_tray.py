@@ -77,6 +77,7 @@ class WindowsTrayTests(unittest.TestCase):
             mock_tk.Tk.return_value = MagicMock()
             mock_picker = MagicMock()
             mock_picker.askopenfilename.return_value = str(character)
+            mock_tk.filedialog = mock_picker
             with patch.object(sync, "candidate_paths", return_value=[]), \
                  patch.object(sync, "config_path", return_value=config), \
                  patch.object(sync.sys, "stdin", None), \
