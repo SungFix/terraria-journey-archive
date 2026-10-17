@@ -309,56 +309,106 @@ def parser_database(items: dict[str, tuple[int, int]]) -> Path:
 
 
 def decode_character_file(path: Path, items: dict[str, tuple[int, int]]) -> dict:
-    """Read complete Terraria save format with version-aware field offsets.
+    """Read player data without altering any file.
 
-    Heuristic byte scanning is no longer used for auto-sync. The upstream
-    player parser explicitly supports Terraria 1.4.5.6; fail closed for later
-    unknown formats instead of fabricating a research table.
+    For save v326 use an *experimental guarded parse* with the v319 field
+    definitions. Only publish counters when multiple independent validations
+    pass. Do not silently downgrade saves or guess research offsets.
     """
-    raw = decrypt_player(path.read_bytes())
+    encrypted = path.read_bytes()
+    raw = decrypt_player(encrypted)
     version, player, _ = header(raw)
-    if version >= 320:
+    if version > 326:
         raise ValueError(
-            f"Save versão {version}: leitor compatível até a versão 319. "
-            "Precisamos atualizar o formato antes de sincronizar."
+            f"Save versão {version}: formato superior ao 326; "
+            "aguarde atualização do leitor. Nenhum item foi marcado."
         )
     try:
         from terraria_player import PlayerParser
+        from terraria_player.parser import player as player_parser_impl
     except ImportError as exc:
         raise RuntimeError("Biblioteca de leitura 1.4.5 ausente no executável") from exc
+
+    compatibility_probe = version >= 320
+    supported_before = player_parser_impl.SUPPORTED_VERSIONS
     try:
+        if compatibility_probe:
+            # Parser source has no fields annotated between 320-326.
+            # This only allows a guarded ATTEMPT; it is not proof of support.
+            player_parser_impl.SUPPORTED_VERSIONS = range(0, 327)
         parsed = PlayerParser(path, parser_database(items)).parse()
     except Exception as exc:
-        # Do not include raw content, full user path or character details.
         raise ValueError(
-            f"Não foi possível ler a estrutura do save v{version}: "
-            f"{type(exc).__name__} ({str(exc)[:180]})"
+            f"Leitura estrutural do save v{version} falhou: "
+            f"{type(exc).__name__} ({str(exc)[:140]}). "
+            "Nenhum item foi marcado."
         ) from exc
-    if parsed.get("name") != player:
-        raise ValueError("Nome inconsistente após leitura do save; nada foi marcado")
+    finally:
+        player_parser_impl.SUPPORTED_VERSIONS = supported_before
+
+    if parsed.get("name") != player or parsed.get("version") != version:
+        raise ValueError("Dados de cabeçalho inconsistentes. Nada foi marcado.")
+    if parsed.get("difficulty") != "Journey":
+        raise ValueError("O leitor não confirmou Modo Jornada; nada foi marcado.")
+
+    # The parser exposes exactly how far it read. Prevent partial reads with
+    # implausibly large trailing payloads from being interpreted as research.
+    consumed = parsed.get("_parser_offset")
+    trailing = parsed.get("_remaining_bytes")
+    if not isinstance(consumed, int) or not isinstance(trailing, int):
+        raise ValueError("Leitor não informou os limites da leitura. Nada foi marcado.")
+    if not (len(raw) // 3 < consumed <= len(raw)) or trailing != len(raw) - consumed:
+        raise ValueError("Limites da estrutura incompatíveis com o save. Nada foi marcado.")
+    if compatibility_probe and trailing > max(4096, len(raw) // 10):
+        raise ValueError(
+            f"Save v{version}: {trailing} bytes finais desconhecidos; "
+            "leitura inconclusiva. Nada foi marcado."
+        )
+
     researched = parsed.get("researched_items")
     if not isinstance(researched, dict):
-        raise ValueError("Leitor não encontrou tabela de pesquisas; nada foi marcado")
+        raise ValueError("Leitor não encontrou tabela de pesquisas. Nada foi marcado.")
     counts: dict[str, int] = {}
     unknown_keys: dict[str, int] = {}
+    recognized = 0
     for code_name, quantity in researched.items():
         if not isinstance(code_name, str) or not isinstance(quantity, int):
-            raise ValueError("Dados de pesquisa inválidos; nada foi marcado")
+            raise ValueError("Dados de pesquisa inválidos. Nada foi marcado.")
         if quantity < 0 or quantity > 1000000:
-            raise ValueError("Quantidade de pesquisa inválida; nada foi marcado")
-        # Terraria persistent keys may be prefixed as Terraria:<item-name>.
+            raise ValueError("Quantidade de pesquisa inválida. Nada foi marcado.")
         key = code_name.split(":", 1)[-1]
         match = items.get(key)
         if match:
+            recognized += 1
             item_id, _ = match
             counts[str(item_id)] = max(counts.get(str(item_id), 0), quantity)
         else:
             unknown_keys[code_name] = quantity
+    if compatibility_probe:
+        # v326 has not been validated using this user's actual save. The
+        # structural parse must retain known vanilla persistent item IDs.
+        if not researched or recognized < 1:
+            raise ValueError(
+                "Save v326: nenhuma pesquisa reconhecida com segurança. "
+                "Nada foi marcado."
+            )
+        if recognized * 10 < len(researched) * 7:
+            raise ValueError(
+                f"Save v326: identificados apenas {recognized}/"
+                f"{len(researched)} IDs conhecidos; leitura inconclusiva. Nada foi marcado."
+            )
     return {
         "player": player, "version": version,
         "countsById": counts, "unknownByKey": unknown_keys,
         "unknownCount": len(unknown_keys),
+        "compatibility": "v326-experimental-validado-estruturalmente" if compatibility_probe else "conhecido",
+        "diagnostic": {
+            "version": version, "entries": len(researched),
+            "recognized": recognized, "unrecognized": len(unknown_keys),
+            "trailingBytes": trailing,
+        }
     }
+
 
 def candidate_paths() -> list[Path]:
     homes = [Path.home() / "Documents" / "My Games" / "Terraria" / "Players",
@@ -555,8 +605,12 @@ def main():
         print(f"Diagnóstico: v{version}; tamanho={len(encrypted)} bytes; modo=Jornada")
         try:
             results = decode_character_file(player, items)
-            print(f"Leitura OK: identificados={len(results['countsById'])}, "
-                  f"novos/desconhecidos={results['unknownCount']}")
+            report = results.get("diagnostic", {})
+            print(f"Leitura OK: {results.get('compatibility', 'conhecido')}; "
+                  f"pesquisas={report.get('entries')}, "
+                  f"identificadas={report.get('recognized')}, "
+                  f"novas/desconhecidas={report.get('unrecognized')}, "
+                  f"bytes finais={report.get('trailingBytes')}")
         except Exception as exc:
             print(f"Leitura indisponível: {exc}")
         return
