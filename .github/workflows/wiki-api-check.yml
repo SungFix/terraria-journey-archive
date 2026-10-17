@@ -24,4 +24,34 @@ jobs:
               print(kind,'STATUS',r.status,'CORS',r.headers.get('access-control-allow-origin'),'TYPE',r.headers.get('content-type'),'SNIPPET',body[:180].decode('utf-8','replace'))
            except Exception as e:
             print(kind,'ERROR',type(e).__name__,str(e)[:240])
+          print('--- more wiki endpoint checks ---')
+          import re, html as h
+          for locale,title in [('pt','Picareta de Ferro'),('es','Pico de hierro'),('en','Iron Pickaxe')]:
+           pref='' if locale=='en' else '/'+locale
+           params={'action':'parse','page':title,'prop':'text|displaytitle','format':'json','origin':'*'}
+           try:
+            req=urllib.request.Request('https://terraria.wiki.gg'+pref+'/api.php?'+urllib.parse.urlencode(params),headers={'User-Agent':'JourneyArchiveWikiCheck/1.0'})
+            with urllib.request.urlopen(req,timeout=18) as res:
+             obj=json.loads(res.read(5000000))
+             print(locale, 'status',res.status,'cors',res.headers.get('access-control-allow-origin'),'title',obj.get('parse',{}).get('title'),'error',obj.get('error',{}).get('code'))
+           except Exception as e: print(locale,'ERROR',type(e).__name__,str(e)[:150])
+          try:
+           params={'action':'parse','page':'Journey_Mode/Research_list','prop':'text','format':'json','origin':'*'}
+           req=urllib.request.Request('https://terraria.wiki.gg/api.php?'+urllib.parse.urlencode(params),headers={'User-Agent':'JourneyArchiveWikiCheck/1.0'})
+           with urllib.request.urlopen(req,timeout=38) as res:
+            obj=json.load(res)
+            body=obj.get('parse',{}).get('text',{}).get('*','')
+            print('RESEARCH_LIST html_len',len(body),'tr',body.count('<tr'),'tables',body.count('<table'))
+            for row in re.findall(r'<tr[^>]*>.*?</tr>',body,re.I|re.S)[:12]:
+             txt=re.sub(r'<[^>]+>',' ',row)
+             print('ROW',h.unescape(re.sub(r'\\s+',' ',txt).strip())[:260])
+            with open('research_list.html','w',encoding='utf-8') as o:o.write(body)
+          except Exception as e: print('RESEARCH_LIST_ERROR',type(e).__name__,str(e)[:180])
           PY
+      - name: Save research-list diagnostics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terraria-research-list-html
+          path: research_list.html
+          if-no-files-found: ignore
