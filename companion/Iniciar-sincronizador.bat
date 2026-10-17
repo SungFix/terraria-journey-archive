@@ -1,12 +1,22 @@
 @echo off
-chcp 65001 >nul
+setlocal
 cd /d "%~dp0.."
-py -3 -c "import cryptography" >nul 2>nul
-if errorlevel 1 (
- echo Python ou a biblioteca cryptography nao encontrados.
- echo Instale Python 3.11+ e execute: py -3 -m pip install -r companion\requirements.txt
- pause
- exit /b 1
+rem Prefer the background Windows app: no persistent CMD.
+if exist "%~dp0JourneyArchiveSync.exe" (
+  start "" "%~dp0JourneyArchiveSync.exe"
+  exit /b 0
 )
-py -3 companion\sync.py
+if exist "%~dp0..\dist\JourneyArchiveSync.exe" (
+  start "" "%~dp0..\dist\JourneyArchiveSync.exe"
+  exit /b 0
+)
+rem Python fallback uses pythonw.exe, which has no console.
+where pyw >nul 2>&1
+if not errorlevel 1 (
+  start "" pyw -3 "%~dp0tray.py"
+  exit /b 0
+)
+echo Sincronizador discreto nao encontrado.
+echo Baixe JourneyArchiveSync.exe em GitHub Actions ou instale Python e dependencias.
 pause
+exit /b 1
