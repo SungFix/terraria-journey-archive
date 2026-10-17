@@ -1,0 +1,63 @@
+name: Testar contraste de todos os artigos
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/app.css'
+      - 'assets/app.js'
+      - 'index.html'
+      - 'scripts/qa-wiki-contrast.mjs'
+      - '.github/workflows/wiki-contrast.yml'
+jobs:
+  contrast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar Playwright e Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Buscar artigos oficiais de diferentes categorias
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, urllib.request, urllib.parse
+          root=pathlib.Path('tests/wiki-article-fixtures')
+          root.mkdir(parents=True,exist_ok=True)
+          for name,lang in [
+            ('Iron Pickaxe','pt'),('Dirt Block','en'),('Zenith','en'),
+            ('Hermes Boots','en'),('Ironskin Potion','en'),('Work Bench','en'),
+            ('Wood','en'),('Terra Blade','en'),('Molten Breastplate','en')]:
+            title='Picareta de Ferro' if lang=='pt' else name
+            url='https://terraria.wiki.gg'+('/pt' if lang=='pt' else '')+'/api.php?'+urllib.parse.urlencode({
+              'action':'parse','page':title,'prop':'text','format':'json','origin':'*'})
+            req=urllib.request.Request(url,headers={'User-Agent':'JourneyArchive-Contrast-Tests/1.0 (GitHub SungFix)'})
+            with urllib.request.urlopen(req, timeout=45) as response:
+              data=json.load(response)
+            article=data.get('parse',{}).get('text',{}).get('*','')
+            if len(article)<1000:
+              raise RuntimeError(f'No article {name} {lang}')
+            (root/(name.replace(' ','_')+'_'+lang+'.html')).write_text(article,encoding='utf8')
+            print('Fetched',name,lang,'HTML chars',len(article))
+          PY
+      - name: Testar legibilidade em computador e celular
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/journey-server.log 2>&1 &
+          sleep 2
+          node scripts/qa-wiki-contrast.mjs > /tmp/terraria-contrast-report.json
+          cat /tmp/terraria-contrast-report.json
+      - name: Arquivar relatório e capturas de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Terraria-Wiki-Contrast-Audit
+          path: |
+            /tmp/terraria-contrast-report.json
+            /tmp/terraria-contrast-qa/*.png
+          if-no-files-found: warn
