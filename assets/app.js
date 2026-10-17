@@ -290,6 +290,20 @@ function wikiDocument(html,locale){
  for(const bad of root.querySelectorAll('script,style,link,meta,iframe,object,embed,form,button,input,textarea,select,svg,math,canvas,video,noscript'))bad.remove();
  for(const bad of root.querySelectorAll('.mw-editsection,.mw-redirectedfrom,.noprint,.mw-jump-link,.printfooter'))bad.remove();
  const base='https://terraria.wiki.gg'+(locale==='en'?'':'/'+locale)+'/wiki/';
+ // Hide the Nintendo 3DS PLATFORM LOGO in every imported article.
+ // The wiki uses commons.wiki.gg/images/3DS.svg (also inside history tables).
+ // Keep other wiki content, platform information and genuine item sprites.
+ for(const img of [...root.querySelectorAll('img')]){
+  const source=img.getAttribute('data-src')||img.getAttribute('src')||'';
+  const alt=(img.getAttribute('alt')||'').trim();
+  const isLogo=/(?:^|[/])(?:3ds|nintendo[_ -]?3ds)(?:[_ -]?(?:logo|icon))?\.(?:svg|png|webp|gif)(?:[?#/]|$)/i.test(source)
+   || /^(?:vers[aã]o para )?(?:nintendo\s+)?3ds$/i.test(alt);
+  if(!isLogo)continue;
+  const parent=img.parentElement;
+  img.remove();
+  // Avoid leaving an empty, clickable icon link in the wiki's history.
+  if(parent?.tagName==='A'&&!parent.textContent.trim()&&!parent.querySelector('img'))parent.remove();
+ }
  for(const el of [...root.querySelectorAll('*')]){
   for(const attr of [...el.attributes]){
    const n=attr.name.toLowerCase();
