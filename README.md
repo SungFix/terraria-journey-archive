@@ -45,6 +45,16 @@ Para selecionar outro personagem, execute:
 JourneyArchiveSync.exe --select
 ```
 
+### Diagnóstico seguro (se houver erro na leitura)
+
+Abra o Prompt de Comando na pasta do executável e rode:
+
+```bat
+JourneyArchiveSync.exe --diagnose
+```
+
+Esse comando mostra a versão do save, sua dimensão e o resultado da leitura, sem publicar o arquivo ou o nome do personagem. Envie apenas **as linhas do diagnóstico** se precisar de suporte; evite publicar arquivos `.plr` completos.
+
 ### Rodar pelo código-fonte (alternativa)
 
 Requer Python 3.11+:
@@ -67,7 +77,7 @@ O projeto contém também `companion/Iniciar-sincronizador.bat` (quando executad
 
 ## Limitações
 
-- O leitor foi testado com saves de teste sintéticos, **não com um `.plr` real do usuário**. Formatos novos ou especiais podem não ser reconhecidos; nesse caso o aplicativo informa o erro e **não altera marcações automaticamente**.
+- A leitura usa a biblioteca independente `terraria-player`, testada pelo projeto original com Terraria **1.4.5.6**. O sincronizador suporta formatos de save até o identificador interno **319** e rejeita versões posteriores até validação. Foram realizados testes sintéticos e um teste com save público antigo, mas **a leitura ainda não foi confirmada com seu personagem real**. Se houver falha, o aplicativo informa o erro e **não altera marcações automaticamente**.
 - O mapa de IDs de base é derivado do [terraria-research-tracker](https://github.com/iagox86/terraria-research-tracker) (licença MIT) e cobre principalmente itens até o ID 5124. Itens posteriores podem ser identificados pelo nome, quando houver correspondência.
 - Saves em nuvem Steam sem cópia local acessível precisam ser selecionados/baixados localmente.
 - O programa deve continuar **aberto** para sincronizar depois que o jogo salvar; atualizações do jogo podem exigir ajustes no leitor.
@@ -79,6 +89,9 @@ O projeto contém também `companion/Iniciar-sincronizador.bat` (quando executad
 No repositório, abra **Settings → Pages → Deploy from a branch → main → /(root) → Save**.
 
 ## Créditos
+
+Leitor completo de personagem: **[royalrizen/Terraria-Plr-Editor](https://github.com/royalrizen/Terraria-Plr-Editor)** (MIT; licença em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+
 
 Projeto independente de fã. Terraria e sua arte pertencem à Re-Logic; não há afiliação oficial com Re-Logic ou Terraria Wiki.
 
