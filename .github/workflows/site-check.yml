@@ -1,0 +1,51 @@
+name: Verificar Journey Archive Web
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'wiki.html'
+      - 'assets/**'
+      - 'data/catalog-base.json'
+      - '.github/workflows/site-check.yml'
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar JavaScript
+        run: |
+          node --check assets/wiki.js
+          node --check assets/wiki-guides.js
+      - name: Verificar páginas e catálogo local
+        run: |
+          python3 - <<'PY'
+          import pathlib, json
+          root=pathlib.Path('.')
+          for path in ['index.html','wiki.html','assets/wiki.css','assets/wiki.js','assets/wiki-guides.js','data/catalog-base.json']:
+              assert (root/path).is_file(), path
+          site=(root/'index.html').read_text()
+          wiki=(root/'wiki.html').read_text()
+          catalog=json.loads((root/'data/catalog-base.json').read_text())
+          assert len(catalog['items']) >= 5000
+          assert 'wiki.html?item=' in site and 'loadBaseCatalog' in site
+          assert 'assets/wiki.js' in wiki and 'assets/wiki-guides.js' in wiki
+          assert 'https://terraria.wiki.gg/wiki/' not in site.split('href=')[-1]
+          print('Arquivos válidos, ',len(catalog['items']),'itens na base local')
+          PY
+      - name: Preparar arquivos para teste no navegador
+        uses: actions/upload-artifact@v4
+        with:
+          name: JourneyArchive-Web
+          path: |
+            index.html
+            wiki.html
+            assets/
+            data/catalog-base.json
+          if-no-files-found: error
