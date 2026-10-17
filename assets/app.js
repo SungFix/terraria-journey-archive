@@ -86,7 +86,7 @@ function totals(){const done=S.items.reduce((n,item)=>n+(isDone(item)?1:0),0);re
 function isArmorPiece(item){
  // Classify helmet, chest and leg armor, including variant names used for
  // Hallowed, Shroomite and vanity pieces. Image URLs remain item-specific.
- return classify(item)==='armor'||/\\b(?:Headgear|Headpiece|Helm|Helmet|Hood|Hat|Mask|Breastplate|Chestplate|Chainmail|Plate Mail|Greaves|Leggings|Pants|Shirt)\\b/i.test(item.en||'');
+ return classify(item)==='armor'||/\b(?:Headgear|Headpiece|Helm|Helmet|Hood|Hat|Mask|Breastplate|Chestplate|Chainmail|Plate Mail|Greaves|Leggings|Pants|Shirt)\b/i.test(item.en||'');
 }
 function spriteURL(item,attempt){
  const filename=encodeURIComponent(String(item.wikiTitle||item.en).replace(/ /g,'_')+'.png');
@@ -391,7 +391,7 @@ function wikiDocument(html,locale,item=null){
  let infobox=root.querySelector(':scope > .infobox.item, :scope > .infobox');
  if(item&&isArmorPiece(item)){
    const expected=String(item.id);
-   const idRegex=new RegExp('(?:^|\\\\D)'+expected+'(?:\\\\D|$)');
+   const idRegex=new RegExp('(?:^|\\D)'+expected+'(?:\\D|$)');
    const candidates=[...root.querySelectorAll('.infobox.item')];
    const exact=candidates.find(box=>{
      const fields=[...box.querySelectorAll('.ids, .section.ids, [class*="item-id"]')];
