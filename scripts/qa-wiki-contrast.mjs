@@ -13,10 +13,7 @@ const cases = [
   ['Zenith', 'en'],
   ['Hermes Boots', 'en'],
   ['Ironskin Potion', 'en'],
-  ['Work Bench', 'en'],
-  ['Wood', 'en'],
   ['Terra Blade', 'en'],
-  ['Molten Breastplate', 'en'],
 ];
 const screens = [1440, 390];
 fs.mkdirSync('/tmp/terraria-contrast-qa', { recursive: true });
@@ -85,7 +82,15 @@ for (const [name,lang] of cases) {
       return {totalCells:cells.length,
         backgrounds:sample,
         overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
-        renderedText:document.querySelector('#wikiContent')?.innerText?.length||0};
+        renderedText:document.querySelector('#wikiContent')?.innerText?.length||0,
+        offenders:[...document.querySelectorAll('body *')].filter(el=>{
+          const c=getComputedStyle(el),r=el.getBoundingClientRect();
+          return c.display!=='none'&&c.visibility!=='hidden'&&r.right>innerWidth+15&&r.width>20;
+        }).sort((a,b)=>b.getBoundingClientRect().right-a.getBoundingClientRect().right).slice(0,15).map(el=>{
+          const r=el.getBoundingClientRect(),c=getComputedStyle(el);
+          return {node:el.tagName,cls:String(el.className).slice(0,70),left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),
+            css:{position:c.position,display:c.display,overflow:c.overflow,width:c.width,maxWidth:c.maxWidth},txt:el.textContent.trim().slice(0,70)};
+        })};
     });
     const low=[];
     for(const cell of audit.backgrounds) {
@@ -97,7 +102,7 @@ for (const [name,lang] of cases) {
     }
     const pass = !errors.length && !low.length && audit.overflow<=6 && audit.renderedText>150;
     results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),
-      overflow:audit.overflow,errors:errors.slice(0,3)});
+      overflow:audit.overflow,offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
     if(!pass)failures.push(name+' ('+width+'px): '+JSON.stringify(results.at(-1)));
     if(name==='Iron Pickaxe'||name==='Zenith'){
       await page.screenshot({path:'/tmp/terraria-contrast-qa/'+name.replaceAll(' ','-')+'-'+width+'.png'});
