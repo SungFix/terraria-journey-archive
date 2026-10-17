@@ -784,3 +784,59 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   .item-card .item-separator{font-size:14px}
   #wikiContent .i > .wiki-item-separator{margin:0 4px;font-size:13px}
 }
+
+
+/* Icon • item name     × quantity, also inside imported wiki recipes. */
+#wikiContent .wiki-article-layout .i.journey-item-link{
+  display:inline-flex!important;
+  align-items:center;
+  vertical-align:middle;
+  gap:0;
+  max-width:100%;
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#wikiContent .wiki-article-layout .i.journey-item-link > a:has(img){
+  display:inline-flex;
+  align-items:center;
+  flex:none;
+  vertical-align:middle;
+}
+#wikiContent .wiki-article-layout .i.journey-item-link > span:not(.wiki-item-separator){
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#wikiContent .wiki-article-layout .i.journey-item-link > .wiki-item-separator{
+  flex:none;
+  display:inline-block;
+  margin:0 8px!important;
+  line-height:1;
+  font-size:14px;
+  color:#c8e8ab!important;
+  font-weight:800;
+  user-select:none;
+}
+#wikiContent .wiki-article-layout .journey-item-link + .journey-item-quantity{
+  display:inline-flex!important;
+  vertical-align:middle;
+  margin:0 0 0 11px!important;
+  padding:2px 7px;
+  border:1px solid #677f54;
+  border-radius:4px;
+  background:#324936!important;
+  color:#ffe3a0!important;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.4;
+  white-space:nowrap;
+  letter-spacing:.01em;
+}
+@media(max-width:600px){
+ #wikiContent .wiki-article-layout .i.journey-item-link > .wiki-item-separator{margin:0 5px!important}
+ #wikiContent .wiki-article-layout .journey-item-link + .journey-item-quantity{
+   margin-left:8px!important;
+   padding:2px 5px;
+ }
+}
