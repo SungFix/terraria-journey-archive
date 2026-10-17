@@ -55,7 +55,7 @@ JourneyArchiveSync.exe --diagnose
 
 Esse comando mostra a versão do save, sua dimensão e, quando a leitura passa, um resumo da estrutura e das pesquisas, sem publicar o arquivo ou o nome do personagem. Em saves v326, quando o leitor falha, ele informa a linha do leitor, **offset** (posição numérica do erro) e se a tabela de pesquisas já havia sido inteiramente lida. Nenhum byte bruto ou conteúdo do save é exibido.
 
-**V7:** Quando o leitor antigo completa a tabela de pesquisas antes de falhar em campos novos posteriores, a V7 pode sincronizar essa tabela com verificações adicionais de segurança. Se a falha ocorrer antes da tabela ser concluída, o sincronizador não altera as marcações e informa offsets para diagnóstico. A V7 ainda precisa ser validada em um save v326 real. Para v326 ele faz uma tentativa de leitura conservadora; se houver qualquer inconsistência, não sincroniza nem marca itens. Envie apenas **as linhas do diagnóstico** se precisar de suporte; evite publicar arquivos `.plr` completos.
+**V8:** Usa um adaptador de layout v326 para considerar o indicador de favorito nos equipamentos (introduzido no formato 322) e um byte reservado nos dados permanentes (introduzido no 324). A leitura foi verificada com um arquivo real e público de personagem v326 no GitHub Actions, além dos testes sintéticos. O teste real é de personagem **não Jornada**; a leitura do progresso de pesquisa do seu personagem Jornada ainda precisa de confirmação. A leitura continua local e somente de consulta.
 
 ### Rodar pelo código-fonte (alternativa)
 
@@ -79,7 +79,7 @@ O projeto contém também `companion/Iniciar-sincronizador.bat` (quando executad
 
 ## Limitações
 
-- A leitura usa a biblioteca independente `terraria-player`, testada pelo projeto original com Terraria **1.4.5.6**. O sincronizador usa um **modo experimental e conservador para saves v326**, que só aceita o resultado quando há consistência estrutural, personagem em Modo Jornada e IDs de itens suficientemente reconhecidos; não há confirmação ainda com um arquivo real v326. Formatos acima de 326 continuam bloqueados. Foram realizados testes sintéticos e um teste com save público antigo, mas **a leitura ainda não foi confirmada com seu personagem real**. Se houver falha, o aplicativo informa o erro e **não altera marcações automaticamente**.
+- A leitura usa a biblioteca independente `terraria-player`, testada pelo projeto original com Terraria **1.4.5.6**. O sincronizador usa um **leitor adaptado com validações adicionais para saves v326**, que só aceita o resultado quando há consistência estrutural, personagem em Modo Jornada e IDs de itens suficientemente reconhecidos; não há confirmação ainda com um arquivo real v326. Formatos acima de 326 continuam bloqueados. Foram realizados testes sintéticos e um teste com save público antigo, mas **a leitura ainda não foi confirmada com seu personagem real**. Se houver falha, o aplicativo informa o erro e **não altera marcações automaticamente**.
 - O mapa de IDs de base é derivado do [terraria-research-tracker](https://github.com/iagox86/terraria-research-tracker) (licença MIT) e cobre principalmente itens até o ID 5124. Itens posteriores podem ser identificados pelo nome, quando houver correspondência.
 - Saves em nuvem Steam sem cópia local acessível precisam ser selecionados/baixados localmente.
 - O programa deve continuar **aberto** para sincronizar depois que o jogo salvar; atualizações do jogo podem exigir ajustes no leitor.
