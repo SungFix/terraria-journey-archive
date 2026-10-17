@@ -83,6 +83,17 @@ for (const [name,lang] of cases) {
         backgrounds:sample,
         overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
         renderedText:document.querySelector('#wikiContent')?.innerText?.length||0,
+        itemSeparators:(()=>{
+          const refs=[...document.querySelectorAll('#wikiContent span.i')].filter(i=>{
+            const head=i.firstElementChild;
+            const later=[...i.children].slice(1);
+            return head?.tagName==='A'&&!!head.querySelector('img')
+              &&later.some(el=>el.tagName==='SPAN'
+                 &&!el.classList.contains('wiki-item-separator')&&!!el.textContent.trim());
+          });
+          return {eligible:refs.length,missing:refs.filter(i=>
+            !i.children[1]?.classList.contains('wiki-item-separator')).length};
+        })(),
         threeDSLogos:[...document.querySelectorAll('#wikiContent img')].filter(img=>{
           const src=img.getAttribute('src')||'',alt=img.getAttribute('alt')||'';
           return /(?:^|\/)(?:3ds|nintendo[_ -]?3ds)(?:[_ -]?(?:logo|icon))?\.(?:svg|png|webp|gif)(?:[?#/]|$)/i.test(src)
@@ -117,8 +128,8 @@ for (const [name,lang] of cases) {
       if(['rgb(248, 243, 232)','rgb(244, 238, 226)','rgb(250, 245, 235)'].includes(background))
         low.push({text:cell.text,problem:'light background returned'});
     }
-    const pass = !errors.length && !low.length && !audit.threeDSLogos.length && audit.overflow<=6 && audit.renderedText>150;
-    results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),
+    const pass = !errors.length && !low.length && !audit.threeDSLogos.length && audit.itemSeparators.missing===0 && audit.overflow<=6 && audit.renderedText>150;
+    results.push({name,width,passed:pass,cells:audit.totalCells,lowContrast:low.slice(0,5),itemSeparators:audit.itemSeparators,
       overflow:audit.overflow,threeDSLogos:audit.threeDSLogos,treeChain:audit.overflow>6?audit.treeChain:[],offenders:audit.overflow>6?audit.offenders:[],errors:errors.slice(0,3)});
     if(!pass)failures.push(name+' ('+width+'px): '+JSON.stringify(results.at(-1)));
     if(name==='Iron Pickaxe'||name==='Zenith'){
@@ -128,6 +139,25 @@ for (const [name,lang] of cases) {
   finally{await page.close()}
  }
 }
+// The catalog must also separate icon and name in every visible card.
+const catalogPage=await browser.newPage({viewport:{width:390,height:850}});
+try{
+ await catalogPage.goto(base+'/',{waitUntil:'domcontentloaded',timeout:25000});
+ await catalogPage.locator('.item-card').first().waitFor({state:'visible',timeout:15000});
+ const cardAudit=await catalogPage.evaluate(()=>{
+   const cards=[...document.querySelectorAll('.item-card')];
+   const missing=cards.filter(card=>{
+     const children=[...card.querySelector('.item-open')?.children||[]];
+     return !(children.length===3 && children[1].classList.contains('item-separator')
+       && children[1].textContent.trim()==='•' && children[2].classList.contains('item-info'));
+   });
+   return {cards:cards.length,missing:missing.length};
+ });
+ results.push({name:'Catalog icons and item names',width:390,passed:cardAudit.cards>=50&&cardAudit.missing===0,
+   itemSeparators:cardAudit});
+ if(cardAudit.cards<50||cardAudit.missing)failures.push('Catalog separator layout: '+JSON.stringify(cardAudit));
+}catch(e){failures.push('Catalog: '+String(e).slice(0,400))}
+finally{await catalogPage.close()}
 await browser.close();
 console.log(JSON.stringify({audited:results.length,results,failures},null,2));
 if(failures.length)process.exitCode=1;
